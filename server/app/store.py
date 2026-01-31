@@ -71,11 +71,12 @@ class InMemoryStore:
             )
             for task in session.tasks
         ]
-    # Submit answers and score them
+
     def submit_answers(self, session_id: str, answers: List[AnswerSchema]) -> SubmitAnswersResponse:
         session = self.get_session(session_id)
         valid_ids = {task.id for task in session.tasks}
         seen = set()
+
         for answer in answers:
             if answer.task_id not in valid_ids:
                 raise ValueError(f"Unknown task id: {answer.task_id}")
@@ -84,33 +85,47 @@ class InMemoryStore:
             seen.add(answer.task_id)
             session.answers[answer.task_id] = answer
 
-        correct, incorrect, missed_task_ids = score_session(session)
+        correct, _, missed_task_ids = score_session(session)
         return SubmitAnswersResponse(
             correct=correct,
-            incorrect=incorrect,
+            incorrect=len(missed_task_ids),
             missed_task_ids=missed_task_ids,
         )
 
-    # Finish session, generate audit logs and mentor report
     def finish_session(self, session_id: str) -> FinishResponse:
         session = self.get_session(session_id)
-        correct, incorrect, missed_task_ids = score_session(session)
+        correct, _, missed_task_ids = score_session(session)
 
         if not session.audit_logs:
             try:
                 session.audit_logs = build_hacktron_audit_logs(session, missed_task_ids)
             except Exception as exc:
                 session.audit_logs = [
-                    AuditLogSchema(task_id=task_id, raw_log=str(exc))
+                    AuditLogSchema(task_id=task_id, raw_log=f"Audit failed: {str(exc)}")
                     for task_id in missed_task_ids
                 ]
 
         if session.mentor_report is None:
             try:
                 session.mentor_report = build_mentor_report(session, missed_task_ids)
-            except Exception:
+            except Exception as exc:
                 session.mentor_report = build_fallback_mentor_report(missed_task_ids)
 
+        return FinishResponse(
+            session_id=session_id,
+            score=correct,
+            missed_task_ids=missed_task_ids,
+            audit_logs=session.audit_logs,
+            mentor_report=session.mentor_report,
+        )
+
+    def get_session_results(self, session_id: str) -> FinishResponse:
+        session = self.get_session(session_id)
+
+        if not session.audit_logs or session.mentor_report is None:
+            return self.finish_session(session_id)
+
+        correct, _, missed_task_ids = score_session(session)
         return FinishResponse(
             session_id=session_id,
             score=correct,
@@ -131,10 +146,8 @@ def generate_tasks(difficulty: Difficulty, task_count: int, language: str = "jav
     )
     return [_to_task_schema(task, difficulty) for task in frontend_tasks]
 
-# Scoring logic to compare user answers against expected vulnerabilities
 def score_session(session: SessionData) -> tuple[int, int, List[str]]:
     correct = 0
-    incorrect = 0
     missed: List[str] = []
 
     for task in session.tasks:
@@ -147,9 +160,9 @@ def score_session(session: SessionData) -> tuple[int, int, List[str]]:
         if answer.user_choice == expected_choice:
             correct += 1
         else:
-            incorrect += 1
             missed.append(task.id)
 
+    incorrect = len(missed)
     return correct, incorrect, missed
 
 # Build audit logs using Hacktron for missed tasks

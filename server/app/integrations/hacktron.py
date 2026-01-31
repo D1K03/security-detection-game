@@ -47,7 +47,15 @@ def _expand_args(args: List[str], file_path: Path) -> List[str]:
 
 
 def _run_command(cmd: List[str]) -> str:
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=30)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Hacktron command timed out: {' '.join(cmd)}") from exc
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Hacktron command not found: {cmd[0]}") from exc
+
     if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or "Hacktron CLI failed.")
+        error_msg = result.stderr.strip() or "Hacktron CLI failed with no error message"
+        raise RuntimeError(f"Hacktron failed (exit code {result.returncode}): {error_msg}")
+
     return (result.stdout or "").strip()

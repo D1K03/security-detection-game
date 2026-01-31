@@ -182,10 +182,17 @@ def _call_claude(
         ],
     }
 
-    with httpx.Client(timeout=30) as client:
-        response = client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
-        response.raise_for_status()
-        data = response.json()
+    try:
+        with httpx.Client(timeout=30) as client:
+            response = client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+    except httpx.TimeoutException as exc:
+        raise RuntimeError("Claude API request timed out") from exc
+    except httpx.HTTPStatusError as exc:
+        raise RuntimeError(f"Claude API error: {exc.response.status_code}") from exc
+    except httpx.RequestError as exc:
+        raise RuntimeError(f"Claude API connection failed: {str(exc)}") from exc
 
     if isinstance(data, dict) and "content" in data:
         parts = data.get("content") or []
