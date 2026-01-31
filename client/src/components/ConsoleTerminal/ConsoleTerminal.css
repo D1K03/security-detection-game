@@ -1,0 +1,198 @@
+.console-terminal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(180deg, #1a1a24, #0f0f16);
+  border: 1px solid var(--terminal-green-dark);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow:
+    0 0 1px var(--terminal-green),
+    0 0 20px rgba(0, 255, 65, 0.1),
+    inset 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Terminal header */
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.terminal-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.control-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.control-dot.red {
+  background: #ff5f56;
+  box-shadow: 0 0 5px #ff5f56;
+}
+
+.control-dot.yellow {
+  background: #ffbd2e;
+  box-shadow: 0 0 5px #ffbd2e;
+}
+
+.control-dot.green {
+  background: #27c93f;
+  box-shadow: 0 0 5px #27c93f;
+}
+
+.terminal-title {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.terminal-badge {
+  padding: 2px 8px;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid var(--terminal-green-dark);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--terminal-green);
+  font-weight: 600;
+}
+
+/* Editor container */
+.terminal-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Make Monaco blend with our theme */
+.terminal-editor .monaco-editor {
+  background-color: transparent !important;
+}
+
+.terminal-editor .monaco-editor .margin {
+  background-color: transparent !important;
+}
+
+.terminal-editor .monaco-editor .monaco-editor-background {
+  background-color: transparent !important;
+}
+
+.terminal-editor .monaco-editor .line-numbers {
+  color: var(--terminal-green-dark) !important;
+}
+
+.terminal-editor .monaco-editor .current-line ~ .line-numbers {
+  color: var(--terminal-green) !important;
+}
+
+/* Vulnerable line highlight */
+.terminal-editor .vulnerable-line-highlight {
+  background: rgba(255, 51, 51, 0.15) !important;
+  border-left: 3px solid var(--danger-red) !important;
+}
+
+.terminal-editor .vulnerable-line-glyph {
+  background: var(--danger-red);
+  width: 4px !important;
+  margin-left: 3px;
+}
+
+/* Scanline overlay */
+.terminal-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Corner decorations */
+.corner-decor {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--terminal-green-dark);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.corner-decor.top-left {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+
+.corner-decor.top-right {
+  top: 0;
+  right: 0;
+  border-left: none;
+  border-bottom: none;
+}
+
+.corner-decor.bottom-left {
+  bottom: 0;
+  left: 0;
+  border-right: none;
+  border-top: none;
+}
+
+.corner-decor.bottom-right {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+}
+
+/* Loading state */
+.console-terminal.loading::after {
+  content: 'ANALYZING CODE...';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--terminal-green);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .terminal-header {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .control-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .terminal-title {
+    font-size: 0.625rem;
+  }
+
+  .terminal-badge {
+    font-size: 0.5rem;
+    padding: 1px 4px;
+  }
+}
