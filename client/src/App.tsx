@@ -72,7 +72,9 @@ function App() {
         audio.play("click");
       } else {
         console.error("Failed to generate snippets:", result.error);
-        // Show error state or retry
+        // Show error message to user
+        const errorMessage = result.error?.message || 'Failed to generate code snippets. Please try again.';
+        alert(`Error: ${errorMessage}\n\nPlease ensure:\n1. The backend server is running (npm run dev in server folder)\n2. The ANTHROPIC_API_KEY is set in server/.env\n3. You have an active internet connection`);
         actions.resetGame();
       }
     },

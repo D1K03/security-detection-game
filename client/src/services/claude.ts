@@ -312,10 +312,16 @@ class ClaudeService implements IClaudeService {
         difficulty: request.difficulty,
         count: request.count,
       });
-      console.warn('Falling back to mock data. This should only happen in development.');
 
-      // Fall back to mock data
-      return this.generateMockSnippets(request);
+      // Return error instead of falling back to mock data
+      // This ensures the backend API is actually being used
+      return {
+        success: false,
+        error: {
+          code: 'API_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to generate code snippets. Please ensure the backend server is running and the API key is configured.',
+        },
+      };
     }
   }
 

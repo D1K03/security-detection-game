@@ -12,10 +12,10 @@ interface AudioRefs {
 
 // Sound URLs - these can be replaced with actual audio files
 // For now, we'll use Web Audio API to generate simple sounds
-const SOUND_CONFIG: Record<SoundEffect, { frequency: number; duration: number; type: OscillatorType }> = {
+const SOUND_CONFIG: Record<SoundEffect, { frequency: number; duration: number; type: OscillatorType; volume?: number }> = {
   siren: { frequency: 800, duration: 0.5, type: 'sawtooth' },
   success: { frequency: 523.25, duration: 0.2, type: 'sine' }, // C5
-  click: { frequency: 1000, duration: 0.05, type: 'square' },
+  click: { frequency: 800, duration: 0.05, type: 'sine', volume: 0.15 }, // Softer, lower frequency, reduced volume
   warning: { frequency: 440, duration: 0.3, type: 'triangle' },
   tick: { frequency: 1200, duration: 0.02, type: 'square' },
 };
@@ -71,9 +71,10 @@ export function useAudio() {
       oscillator.type = config.type;
       oscillator.frequency.setValueAtTime(config.frequency, ctx.currentTime);
 
-      // Volume envelope
+      // Volume envelope - use config volume if specified, otherwise use global volume
+      const effectiveVolume = config.volume !== undefined ? config.volume : volumeRef.current;
       gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(volumeRef.current, ctx.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(effectiveVolume, ctx.currentTime + 0.01);
       gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + config.duration);
 
       // Special handling for siren - add frequency modulation
