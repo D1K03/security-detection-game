@@ -4,20 +4,53 @@ import type {
   ApiResult,
   IElevenLabsService,
 } from '../types';
-import api from './api';
+
+// ElevenLabs API configuration
+const ELEVENLABS_API_URL = import.meta.env.VITE_ELEVENLABS_API_URL || '';
+const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY || '';
 
 class ElevenLabsService implements IElevenLabsService {
   async generateSpeech(request: TTSRequest): Promise<ApiResult<TTSResponse>> {
+    // Check if ElevenLabs is configured
+    if (!ELEVENLABS_API_URL || !ELEVENLABS_API_KEY) {
+      console.log('ElevenLabs API not configured - audio playback disabled');
+      return {
+        success: false,
+        error: {
+          code: 'TTS_NOT_CONFIGURED',
+          message: 'Text-to-speech service is not configured',
+        },
+      };
+    }
+
     try {
-      // Try to use real API first
-      const response = await api.generateSpeech({
-        text: request.text,
-        voiceId: request.voiceId,
+      // Call ElevenLabs API directly
+      const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${request.voiceId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': ELEVENLABS_API_KEY,
+        },
+        body: JSON.stringify({
+          text: request.text,
+          model_id: 'eleven_monolingual_v1',
+        }),
       });
-      return { success: true, data: response as TTSResponse };
-    } catch {
-      // Fall back to mock response
-      console.log('ElevenLabs API not available - audio playback disabled');
+
+      if (!response.ok) {
+        throw new Error(`ElevenLabs API error: ${response.status}`);
+      }
+
+      // Get audio blob and create URL
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      return {
+        success: true,
+        data: { audioUrl },
+      };
+    } catch (error) {
+      console.warn('ElevenLabs API error:', error);
       return {
         success: false,
         error: {

@@ -156,8 +156,7 @@ function App() {
   // Handle play button on home
   const handlePlay = useCallback(() => {
     audio.play('click');
-    actions.startLoading(); // Just to transition to difficulty select
-    actions.resetGame(); // Reset and go to IDLE with "selecting" state
+    actions.startLoading(); // Transition to LOADING phase which shows DifficultySelect
   }, [actions, audio]);
 
   // Determine what to render based on game phase

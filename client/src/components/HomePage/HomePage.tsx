@@ -1,15 +1,61 @@
+import { useState, useEffect } from 'react';
 import './HomePage.css';
+
+interface ApiInfo {
+  name: string;
+  version: string;
+  description: string;
+}
 
 interface HomePageProps {
   onPlay: () => void;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export function HomePage({ onPlay }: HomePageProps) {
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'offline'>('checking');
+  const [apiInfo, setApiInfo] = useState<ApiInfo | null>(null);
+
+  // Fetch API info from root endpoint on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/`);
+        if (response.ok) {
+          const data = await response.json();
+          setApiInfo(data);
+          setConnectionStatus('connected');
+        } else {
+          setConnectionStatus('offline');
+        }
+      } catch {
+        setConnectionStatus('offline');
+      }
+    };
+
+    checkConnection();
+
+    // Re-check every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="home-page">
       <div className="home-content">
         {/* Decorative grid background */}
         <div className="home-grid-bg" />
+
+        {/* Connection status indicator */}
+        <div className={`connection-status ${connectionStatus}`}>
+          <span className="status-dot" />
+          <span className="status-text">
+            {connectionStatus === 'checking' && 'Connecting to server...'}
+            {connectionStatus === 'connected' && `Connected to ${apiInfo?.name || 'API'} v${apiInfo?.version || '?'}`}
+            {connectionStatus === 'offline' && 'Offline Mode (Mock Data)'}
+          </span>
+        </div>
 
         {/* Main title section */}
         <div className="home-header">
@@ -44,6 +90,11 @@ export function HomePage({ onPlay }: HomePageProps) {
             <p className="terminal-line warning">
               <span className="prompt">!</span> Warning: False accusations will trigger lockdown
             </p>
+            {connectionStatus === 'connected' && (
+              <p className="terminal-line success">
+                <span className="prompt">✓</span> Backend connection established
+              </p>
+            )}
           </div>
         </div>
 

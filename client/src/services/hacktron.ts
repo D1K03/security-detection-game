@@ -6,7 +6,8 @@ import type {
   AuditFinding,
 } from '../types';
 import type { Task, VulnerabilityType } from '../types';
-import api from './api';
+import { api } from './api';
+import { getCurrentSessionId } from './claude';
 
 // Remediation suggestions by vulnerability type
 const REMEDIATIONS: Record<VulnerabilityType, string> = {
@@ -46,21 +47,52 @@ const DESCRIPTIONS: Record<VulnerabilityType, string> = {
 
 class HacktronService implements IHacktronService {
   async auditTasks(request: AuditRequest): Promise<ApiResult<AuditResponse>> {
-    try {
-      // Try to use real API first
-      const response = await api.auditTasks({
-        tasks: request.tasks,
-        language: request.language,
-      });
-      return { success: true, data: response as AuditResponse };
-    } catch {
-      // Fall back to mock analysis
-      console.log('Using mock data for audit report');
-      return this.generateMockAudit(request);
+    const sessionId = getCurrentSessionId();
+
+    if (sessionId) {
+      try {
+        // Finish session with backend to get audit results
+        const result = await api.finishSession(sessionId);
+
+        // Convert backend response to frontend format
+        const findings: AuditFinding[] = result.audit_logs.map((log) => {
+          const task = request.tasks.find((t) => t.id === log.task_id);
+          const vulnType = task?.vulnerabilityType || 'SAFE';
+
+          return {
+            taskId: log.task_id,
+            systemName: task?.systemName || 'SECURITY',
+            vulnerability: vulnType,
+            severity: SEVERITY_MAP[vulnType],
+            description: log.raw_log || DESCRIPTIONS[vulnType],
+            codeLocation: {
+              line: task?.vulnerabilityLine || 1,
+              column: 1,
+            },
+            remediation: REMEDIATIONS[vulnType],
+            codeSnippet: task?.code,
+          };
+        });
+
+        return {
+          success: true,
+          data: {
+            report: {
+              findings,
+              summary: result.mentor_report.summary,
+            },
+          },
+        };
+      } catch (error) {
+        console.warn('Backend audit failed, using local analysis:', error);
+      }
     }
+
+    // Fall back to local analysis
+    return this.generateLocalAudit(request);
   }
 
-  private generateMockAudit(request: AuditRequest): ApiResult<AuditResponse> {
+  private generateLocalAudit(request: AuditRequest): ApiResult<AuditResponse> {
     const findings: AuditFinding[] = request.tasks
       .filter((task) => task.isVulnerable)
       .map((task: Task) => ({
