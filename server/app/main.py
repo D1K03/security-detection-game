@@ -25,6 +25,7 @@ from .store import InMemoryStore
 from .integrations.claude_client import generate_frontend_tasks, generate_security_mentor_summary
 from .integrations.hacktron import scan_with_hacktron
 from .integrations.reporting import build_findings, summarize_findings
+from .integrations.elevenlabs import generate_speech
 
 app = FastAPI(title="Security Sabotage API")
 store = InMemoryStore()
@@ -183,7 +184,26 @@ def audit_tasks(payload: AuditRequest) -> AuditResponse:
 
 @app.post("/tts", response_model=TTSResponse)
 def tts(payload: TTSRequest) -> TTSResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TTS integration is not configured."
-    )
+    """Generate text-to-speech audio using ElevenLabs API."""
+    if not payload.text or not payload.text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text cannot be empty."
+        )
+
+    try:
+        audio_url, duration = generate_speech(
+            text=payload.text,
+            voice_id=payload.voiceId
+        )
+        return TTSResponse(audioUrl=audio_url, duration=duration)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate speech: {str(exc)}"
+        ) from exc
