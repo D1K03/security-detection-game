@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AuditReport, Task, VulnerabilityType } from '../../types';
 import './ReportModal.css';
 
@@ -37,6 +37,16 @@ export function ReportModal({
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
+  // Cleanup audio element on unmount
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.src = '';
+      }
+    };
+  }, [audioElement]);
+
   const handlePlayAudio = async () => {
     if (!audioUrl) return;
 
@@ -51,9 +61,18 @@ export function ReportModal({
     } else {
       const audio = new Audio(audioUrl);
       audio.onended = () => setIsPlaying(false);
+      audio.onerror = () => {
+        console.error('Failed to load or play audio');
+        setIsPlaying(false);
+      };
       setAudioElement(audio);
-      await audio.play();
-      setIsPlaying(true);
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch (error) {
+        console.error('Audio playback failed:', error);
+        setIsPlaying(false);
+      }
     }
   };
 

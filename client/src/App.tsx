@@ -141,11 +141,19 @@ function App() {
         });
       }
     } else {
-      // No failed tasks, create empty report
+      // No failed tasks, create empty report with audio
+      const perfectScoreSummary =
+        "Excellent work! All security checks passed successfully. Ship systems are secure.";
+
+      // Generate audio for perfect score too
+      const audioUrl = await elevenlabsService.generateReportAudio(
+        perfectScoreSummary,
+      );
+
       actions.setAuditReport({
         findings: [],
-        summary:
-          "Excellent work! All security checks passed successfully. Ship systems are secure.",
+        summary: perfectScoreSummary,
+        audioUrl: audioUrl || undefined,
       });
     }
 
