@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -29,7 +30,25 @@ from .integrations.hacktron import scan_with_hacktron
 from .integrations.reporting import build_findings, summarize_findings
 from .integrations.elevenlabs import generate_speech, validate_api_key
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Validate required environment variables on startup
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+if not ANTHROPIC_API_KEY:
+    raise RuntimeError(
+        "ANTHROPIC_API_KEY environment variable is required. "
+        "Please set it in server/.env file."
+    )
+
+logger.info("ANTHROPIC_API_KEY loaded successfully")
+
 app = FastAPI(title="Security Sabotage API")
 store = InMemoryStore()
 
@@ -159,18 +178,22 @@ def generate_snippets(payload: GenerateSnippetsRequest) -> GenerateSnippetsRespo
             count=payload.count,
             vuln_density=DIFFICULTY_CONFIGS[difficulty_key].vuln_density,
         )
+        logger.info(f"Successfully generated {len(tasks)} tasks using Claude API")
         return GenerateSnippetsResponse(tasks=tasks)
     except RuntimeError as exc:
+        logger.error(f"Runtime error generating tasks: {str(exc)}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc)
         ) from exc
     except ValueError as exc:
+        logger.error(f"Validation error generating tasks: {str(exc)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc)
         ) from exc
     except Exception as exc:
+        logger.error(f"Unexpected error generating tasks: {str(exc)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate code snippets. Please try again."
@@ -201,7 +224,9 @@ def audit_tasks(payload: AuditRequest) -> AuditResponse:
             hacktron_logs,
             [f"{task.systemName}: {task.vulnerabilityType}" for task in payload.tasks if task.isVulnerable],
         )
-    except Exception:
+        logger.info("Successfully generated Claude security mentor summary")
+    except Exception as exc:
+        logger.error(f"Failed to generate Claude summary, falling back to generic summary: {str(exc)}")
         summary = summarize_findings(findings)
 
     report = AuditReport(findings=findings, summary=summary)

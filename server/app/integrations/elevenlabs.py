@@ -135,6 +135,6 @@ def _get_api_key() -> Optional[str]:
     api_key = os.getenv("ELEVENLABS_API_KEY")
     if api_key:
         return api_key
-    # Load repo-level .env for uvicorn reload processes.
-    load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=True)
+    # Load server/.env for uvicorn reload processes.
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
     return os.getenv("ELEVENLABS_API_KEY")

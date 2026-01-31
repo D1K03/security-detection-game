@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -41,7 +41,7 @@ class InMemoryStore:
     # Create a new session with generated tasks
     def create_session(self, difficulty: Difficulty, task_count: int) -> SessionData:
         session_id = uuid4().hex
-        created_at = datetime.utcnow()
+        created_at = datetime.now(timezone.utc)
         tasks = generate_tasks(difficulty, task_count)
         session = SessionData(
             session_id=session_id,

@@ -301,10 +301,20 @@ class ClaudeService implements IClaudeService {
         complexityLevel: request.complexityLevel,
         count: request.count,
       });
+      console.log('Successfully generated tasks using Claude API');
       return { success: true, data: response as GenerateSnippetsResponse };
     } catch (error) {
+      // Log detailed error information
+      console.error('Failed to fetch snippets from Claude API:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        language: request.language,
+        difficulty: request.difficulty,
+        count: request.count,
+      });
+      console.warn('Falling back to mock data. This should only happen in development.');
+
       // Fall back to mock data
-      console.warn('Failed to fetch snippets from API, using mock data:', error);
       return this.generateMockSnippets(request);
     }
   }
