@@ -147,14 +147,14 @@ class FinishResponse(BaseModel):
     audit_logs: List[AuditLogSchema]
     mentor_report: MentorReportSchema
 
-
+# Request and Response models for Frontend Task Generation and Auditing
 class GenerateSnippetsRequest(BaseModel):
     language: FrontendLanguage
     difficulty: FrontendDifficulty
     complexityLevel: Literal["basic", "intermediate", "advanced"]
     count: int = Field(ge=1, le=10)
 
-
+# model for each frontend task
 class FrontendTask(BaseModel):
     id: str
     systemName: FrontendSystemName
@@ -166,12 +166,12 @@ class FrontendTask(BaseModel):
     status: FrontendTaskStatus = "pending"
     explanation: Optional[str] = None
 
-
+# response model for generated snippets
 class GenerateSnippetsResponse(BaseModel):
     tasks: List[FrontendTask]
     error: Optional[str] = None
 
-
+# model for each audit finding
 class AuditFinding(BaseModel):
     taskId: str
     systemName: FrontendSystemName
@@ -182,29 +182,29 @@ class AuditFinding(BaseModel):
     remediation: str
     codeSnippet: Optional[str] = None
 
-
+# model for the complete audit report
 class AuditReport(BaseModel):
     findings: List[AuditFinding]
     summary: str
     audioUrl: Optional[str] = None
 
-
+# request model for auditing tasks
 class AuditRequest(BaseModel):
     tasks: List[FrontendTask]
     language: FrontendLanguage
 
-
+# response model for audit report
 class AuditResponse(BaseModel):
     report: AuditReport
     error: Optional[str] = None
 
-
+# Request and Response models for Text-to-Speech (TTS) Integration
 class TTSRequest(BaseModel):
     text: str
     voiceId: Optional[str] = None
     voiceSettings: Optional[dict] = None
 
-
+# Response model for TTS output
 class TTSResponse(BaseModel):
     audioUrl: str
     duration: Optional[float] = None

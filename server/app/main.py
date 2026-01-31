@@ -1,7 +1,9 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from .schemas import (
     DIFFICULTY_CONFIGS,
@@ -26,6 +28,8 @@ from .integrations.reporting import build_findings, summarize_findings
 app = FastAPI(title="Security Sabotage API")
 store = InMemoryStore()
 
+CLIENT_INDEX_PATH = Path(__file__).resolve().parents[2] / "client" / "index.html"
+
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -36,9 +40,18 @@ app.add_middleware(
 )
 
 
+# Health check endpoint
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/", response_class=HTMLResponse)
+def landing_page() -> HTMLResponse:
+    # Serve the frontend landing page from the client bundle during dev.
+    if CLIENT_INDEX_PATH.exists():
+        return HTMLResponse(CLIENT_INDEX_PATH.read_text(encoding="utf-8"))
+    raise HTTPException(status_code=404, detail="Client landing page not found.")
 
 
 # Endpoint to create a new session
@@ -92,6 +105,7 @@ def get_results(session_id: str) -> FinishResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+# Endpoint to generate code snippets based on difficulty and count
 @app.post("/generate", response_model=GenerateSnippetsResponse)
 def generate_snippets(payload: GenerateSnippetsRequest) -> GenerateSnippetsResponse:
     try:
@@ -111,7 +125,7 @@ def generate_snippets(payload: GenerateSnippetsRequest) -> GenerateSnippetsRespo
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-
+# Endpoint to audit tasks using Hacktron and generate a report
 @app.post("/audit", response_model=AuditResponse)
 def audit_tasks(payload: AuditRequest) -> AuditResponse:
     if not payload.tasks:

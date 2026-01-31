@@ -194,7 +194,7 @@ def _call_claude(
 
     return json.dumps(data)
 
-
+# Helper to parse and validate Claude JSON response
 def _parse_json_payload(text: str) -> ClaudeTaskPayload:
     try:
         raw = json.loads(text)

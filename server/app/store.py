@@ -119,6 +119,7 @@ class InMemoryStore:
             mentor_report=session.mentor_report,
         )
 
+# Generate tasks based on difficulty and count
 def generate_tasks(difficulty: Difficulty, task_count: int, language: str = "javascript") -> List[TaskSchema]:
     config = DIFFICULTY_CONFIGS[difficulty]
     frontend_tasks = generate_frontend_tasks(
@@ -151,6 +152,7 @@ def score_session(session: SessionData) -> tuple[int, int, List[str]]:
 
     return correct, incorrect, missed
 
+# Build audit logs using Hacktron for missed tasks
 def build_hacktron_audit_logs(session: SessionData, missed_task_ids: List[str]) -> List[AuditLogSchema]:
     if not missed_task_ids:
         return []
@@ -162,7 +164,7 @@ def build_hacktron_audit_logs(session: SessionData, missed_task_ids: List[str]) 
         for task_id, raw_log in logs
     ]
 
-
+# Build mentor report using Claude based on audit logs and missed tasks
 def build_mentor_report(session: SessionData, missed_task_ids: List[str]) -> MentorReportSchema:
     failed_tasks = [task for task in session.tasks if task.id in missed_task_ids]
     failed_summaries = [
@@ -173,7 +175,7 @@ def build_mentor_report(session: SessionData, missed_task_ids: List[str]) -> Men
     summary = generate_security_mentor_summary(hacktron_logs, failed_summaries)
     return MentorReportSchema(summary=summary)
 
-
+# Fallback mentor report if Claude integration fails
 def build_fallback_mentor_report(missed_task_ids: List[str]) -> MentorReportSchema:
     if not missed_task_ids:
         summary = "Clean sweep. No missed vulnerabilities detected in this run."
@@ -184,15 +186,15 @@ def build_fallback_mentor_report(missed_task_ids: List[str]) -> MentorReportSche
         )
     return MentorReportSchema(summary=summary)
 
-
+# Map internal difficulty to frontend difficulty format
 def _to_frontend_difficulty(difficulty: Difficulty) -> FrontendDifficulty:
     return difficulty.upper()  # type: ignore[return-value]
 
-
+# Map complexity tags to frontend complexity levels
 def _map_complexity(tag: str) -> str:
     return {"low": "basic", "medium": "intermediate", "high": "advanced"}.get(tag, "basic")
 
-
+# Convert FrontendTask to TaskSchema
 def _to_task_schema(frontend_task: FrontendTask, difficulty: Difficulty) -> TaskSchema:
     return TaskSchema(
         id=frontend_task.id,
@@ -205,7 +207,7 @@ def _to_task_schema(frontend_task: FrontendTask, difficulty: Difficulty) -> Task
         vulnerability_line=frontend_task.vulnerabilityLine,
     )
 
-
+# Normalize vulnerability type based on whether the task is vulnerable
 def _map_vuln_type(vuln_type: str) -> str:
     return {
         "XSS": "xss",
