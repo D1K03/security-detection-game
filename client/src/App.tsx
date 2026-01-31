@@ -1,17 +1,17 @@
-import { useEffect, useCallback, useState } from 'react';
-import { useGameState, useAudio } from './hooks';
-import { claudeService, hacktronService, elevenlabsService } from './services';
-import { calculateGameConfig } from './types';
-import type { Difficulty, DifficultyFactors, Language } from './types';
+import { useEffect, useCallback, useState } from "react";
+import { useGameState, useAudio } from "./hooks";
+import { claudeService, hacktronService, elevenlabsService } from "./services";
+import { calculateGameConfig } from "./types";
+import type { Difficulty, DifficultyFactors, Language } from "./types";
 
 // Components
-import { HomePage } from './components/HomePage/HomePage';
-import { DifficultySelect } from './components/DifficultySelect/DifficultySelect';
-import { GameScreen } from './components/GameScreen/GameScreen';
-import { EmergencyOverlay } from './components/EmergencyOverlay/EmergencyOverlay';
-import { ReportModal } from './components/ReportModal/ReportModal';
+import { HomePage } from "./components/HomePage/HomePage";
+import { DifficultySelect } from "./components/DifficultySelect/DifficultySelect";
+import { GameScreen } from "./components/GameScreen/GameScreen";
+import { EmergencyOverlay } from "./components/EmergencyOverlay/EmergencyOverlay";
+import { ReportModal } from "./components/ReportModal/ReportModal";
 
-import './App.css';
+import "./App.css";
 
 function App() {
   const { state, currentTask, failedTasks, actions } = useGameState();
@@ -20,19 +20,19 @@ function App() {
 
   // Timer effect
   useEffect(() => {
-    if (state.phase !== 'PLAYING') return;
+    if (state.phase !== "PLAYING") return;
 
     const timer = setInterval(() => {
       if (state.timeRemaining <= 1) {
         // Time's up!
-        audio.play('warning');
+        audio.play("warning");
         actions.timeUp();
         setShowEmergency(true);
       } else {
         actions.tickTimer();
         // Play tick sound when time is low
         if (state.timeRemaining <= 5) {
-          audio.play('tick');
+          audio.play("tick");
         }
       }
     }, 1000);
@@ -42,7 +42,11 @@ function App() {
 
   // Handle difficulty selection and game start
   const handleStartGame = useCallback(
-    async (difficulty: Difficulty, factors: DifficultyFactors, language: Language) => {
+    async (
+      difficulty: Difficulty,
+      factors: DifficultyFactors,
+      language: Language
+    ) => {
       // Set difficulty and language
       actions.setDifficulty(difficulty, factors);
       actions.setLanguage(language);
@@ -62,9 +66,9 @@ function App() {
       if (result.success) {
         actions.loadTasks(result.data.tasks);
         actions.startPlaying();
-        audio.play('click');
+        audio.play("click");
       } else {
-        console.error('Failed to generate snippets:', result.error);
+        console.error("Failed to generate snippets:", result.error);
         // Show error state or retry
         actions.resetGame();
       }
@@ -74,16 +78,16 @@ function App() {
 
   // Handle task answer
   const handleAnswer = useCallback(
-    (answer: 'safe' | 'vulnerable') => {
+    (answer: "safe" | "vulnerable") => {
       if (!currentTask) return;
 
       const isCorrect =
-        (answer === 'vulnerable' && currentTask.isVulnerable) ||
-        (answer === 'safe' && !currentTask.isVulnerable);
+        (answer === "vulnerable" && currentTask.isVulnerable) ||
+        (answer === "safe" && !currentTask.isVulnerable);
 
       // Wrong answer: clicked "vulnerable" on safe code
-      if (answer === 'vulnerable' && !currentTask.isVulnerable) {
-        audio.play('siren');
+      if (answer === "vulnerable" && !currentTask.isVulnerable) {
+        audio.play("siren");
         actions.answerTask(answer);
         setShowEmergency(true);
         return;
@@ -93,9 +97,9 @@ function App() {
       actions.answerTask(answer);
 
       if (isCorrect) {
-        audio.play('success');
+        audio.play("success");
       } else {
-        audio.play('warning');
+        audio.play("warning");
       }
 
       // Check if game is complete
@@ -115,7 +119,8 @@ function App() {
 
     // Audit failed tasks
     const tasksToAudit = state.tasks.filter(
-      (t) => t.status === 'failed' || (t.isVulnerable && t.status !== 'completed')
+      (t) =>
+        t.status === "failed" || (t.isVulnerable && t.status !== "completed")
     );
 
     if (tasksToAudit.length > 0) {
@@ -139,7 +144,8 @@ function App() {
       // No failed tasks, create empty report
       actions.setAuditReport({
         findings: [],
-        summary: 'Excellent work! All security checks passed successfully. Ship systems are secure.',
+        summary:
+          "Excellent work! All security checks passed successfully. Ship systems are secure.",
       });
     }
 
@@ -155,20 +161,20 @@ function App() {
 
   // Handle play button on home
   const handlePlay = useCallback(() => {
-    audio.play('click');
-    actions.startLoading(); // Just to transition to difficulty select
-    actions.resetGame(); // Reset and go to IDLE with "selecting" state
+    audio.play("click");
+    actions.resetGame();
+    actions.startLoading();
   }, [actions, audio]);
 
   // Determine what to render based on game phase
   const renderPhase = () => {
     switch (state.phase) {
-      case 'IDLE':
+      case "IDLE":
         // Check if we should show difficulty select (after clicking play)
         // We use a simple check: if we just clicked play, we want difficulty select
         return <HomePage onPlay={handlePlay} />;
 
-      case 'LOADING':
+      case "LOADING":
         // If we're loading but have no tasks yet, show difficulty select
         if (state.tasks.length === 0) {
           return (
@@ -195,7 +201,7 @@ function App() {
           />
         );
 
-      case 'PLAYING':
+      case "PLAYING":
         return (
           <>
             <GameScreen
@@ -219,7 +225,7 @@ function App() {
           </>
         );
 
-      case 'AUDITING':
+      case "AUDITING":
         return (
           <>
             <GameScreen
@@ -244,7 +250,7 @@ function App() {
           </>
         );
 
-      case 'DEBRIEF':
+      case "DEBRIEF":
         return (
           <ReportModal
             report={state.auditReport || null}
