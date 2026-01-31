@@ -5,28 +5,22 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-# Import schemas and configurations
 from .schemas import (
     DIFFICULTY_CONFIGS,
     AnswerSchema,
     AuditLogSchema,
     Difficulty,
+    FrontendDifficulty,
+    FrontendTask,
     FinishResponse,
     MentorReportSchema,
     SubmitAnswersResponse,
     TaskPublicSchema,
     TaskSchema,
 )
+from .integrations.claude_client import generate_frontend_tasks, generate_security_mentor_summary
+from .integrations.hacktron import scan_with_hacktron
 
-
-SYSTEM_NAMES = [
-    "Navigation",
-    "O2",
-    "Reactor",
-    "Shields",
-    "Comms",
-    "Weapons",
-]
 
 
 @dataclass
@@ -70,15 +64,24 @@ class InMemoryStore:
         return [
             TaskPublicSchema(
                 id=task.id,
+                system_name=task.system_name,
                 code=task.code,
                 difficulty=task.difficulty,
+                language=task.language,
             )
             for task in session.tasks
         ]
     # Submit answers and score them
     def submit_answers(self, session_id: str, answers: List[AnswerSchema]) -> SubmitAnswersResponse:
         session = self.get_session(session_id)
+        valid_ids = {task.id for task in session.tasks}
+        seen = set()
         for answer in answers:
+            if answer.task_id not in valid_ids:
+                raise ValueError(f"Unknown task id: {answer.task_id}")
+            if answer.task_id in seen:
+                raise ValueError(f"Duplicate answer for task id: {answer.task_id}")
+            seen.add(answer.task_id)
             session.answers[answer.task_id] = answer
 
         correct, incorrect, missed_task_ids = score_session(session)
@@ -94,10 +97,19 @@ class InMemoryStore:
         correct, incorrect, missed_task_ids = score_session(session)
 
         if not session.audit_logs:
-            session.audit_logs = build_stub_audit_logs(session, missed_task_ids)
+            try:
+                session.audit_logs = build_hacktron_audit_logs(session, missed_task_ids)
+            except Exception as exc:
+                session.audit_logs = [
+                    AuditLogSchema(task_id=task_id, raw_log=str(exc))
+                    for task_id in missed_task_ids
+                ]
 
         if session.mentor_report is None:
-            session.mentor_report = build_stub_mentor_report(missed_task_ids)
+            try:
+                session.mentor_report = build_mentor_report(session, missed_task_ids)
+            except Exception:
+                session.mentor_report = build_fallback_mentor_report(missed_task_ids)
 
         return FinishResponse(
             session_id=session_id,
@@ -107,31 +119,16 @@ class InMemoryStore:
             mentor_report=session.mentor_report,
         )
 
-#this is going to be replaced with a call to claude to generate tasks based on difficulty and count
-def generate_tasks(difficulty: Difficulty, task_count: int) -> List[TaskSchema]:
+def generate_tasks(difficulty: Difficulty, task_count: int, language: str = "javascript") -> List[TaskSchema]:
     config = DIFFICULTY_CONFIGS[difficulty]
-    vulnerable_count = max(1, round(task_count * config.vuln_density))
-    tasks: List[TaskSchema] = []
-
-    for index in range(task_count):
-        is_vulnerable = index < vulnerable_count
-        vulnerability_type = "none"
-        code = "const input = req.query.q;\nres.send(`<p>${input}</p>`);"
-        if is_vulnerable:
-            vulnerability_type = ["xss", "sqli", "ssrf", "rce"][index % 4]
-
-        tasks.append(
-            TaskSchema(
-                id=f"task-{index + 1}",
-                system_name=SYSTEM_NAMES[index % len(SYSTEM_NAMES)],
-                code=code,
-                is_vulnerable=is_vulnerable,
-                vulnerability_type=vulnerability_type,
-                difficulty=difficulty,
-            )
-        )
-
-    return tasks
+    frontend_tasks = generate_frontend_tasks(
+        language=language,
+        difficulty=_to_frontend_difficulty(difficulty),
+        complexity_level=_map_complexity(config.complexity_tag),
+        count=task_count,
+        vuln_density=config.vuln_density,
+    )
+    return [_to_task_schema(task, difficulty) for task in frontend_tasks]
 
 # Scoring logic to compare user answers against expected vulnerabilities
 def score_session(session: SessionData) -> tuple[int, int, List[str]]:
@@ -154,20 +151,30 @@ def score_session(session: SessionData) -> tuple[int, int, List[str]]:
 
     return correct, incorrect, missed
 
-#audit log for hacktron - to be replaced with real logs from hacktron
-def build_stub_audit_logs(session: SessionData, missed_task_ids: List[str]) -> List[AuditLogSchema]:
-    logs: List[AuditLogSchema] = []
-    for task_id in missed_task_ids:
-        logs.append(
-            AuditLogSchema(
-                task_id=task_id,
-                raw_log=f"[stub] Hacktron would scan {task_id} for exploitable patterns.",
-            )
-        )
-    return logs
+def build_hacktron_audit_logs(session: SessionData, missed_task_ids: List[str]) -> List[AuditLogSchema]:
+    if not missed_task_ids:
+        return []
+    missed_tasks = [task for task in session.tasks if task.id in missed_task_ids]
+    task_payload = [(task.id, task.code) for task in missed_tasks]
+    logs = scan_with_hacktron(task_payload, missed_tasks[0].language or "javascript")
+    return [
+        AuditLogSchema(task_id=task_id, raw_log=raw_log)
+        for task_id, raw_log in logs
+    ]
 
-#mentor report from claude - to be replaced with real report from claude
-def build_stub_mentor_report(missed_task_ids: List[str]) -> MentorReportSchema:
+
+def build_mentor_report(session: SessionData, missed_task_ids: List[str]) -> MentorReportSchema:
+    failed_tasks = [task for task in session.tasks if task.id in missed_task_ids]
+    failed_summaries = [
+        f"{task.system_name}: {task.vulnerability_type} in {task.language or 'javascript'}"
+        for task in failed_tasks
+    ]
+    hacktron_logs = [log.raw_log for log in session.audit_logs]
+    summary = generate_security_mentor_summary(hacktron_logs, failed_summaries)
+    return MentorReportSchema(summary=summary)
+
+
+def build_fallback_mentor_report(missed_task_ids: List[str]) -> MentorReportSchema:
     if not missed_task_ids:
         summary = "Clean sweep. No missed vulnerabilities detected in this run."
     else:
@@ -176,3 +183,37 @@ def build_stub_mentor_report(missed_task_ids: List[str]) -> MentorReportSchema:
             "use parameterized queries, and validate outbound requests."
         )
     return MentorReportSchema(summary=summary)
+
+
+def _to_frontend_difficulty(difficulty: Difficulty) -> FrontendDifficulty:
+    return difficulty.upper()  # type: ignore[return-value]
+
+
+def _map_complexity(tag: str) -> str:
+    return {"low": "basic", "medium": "intermediate", "high": "advanced"}.get(tag, "basic")
+
+
+def _to_task_schema(frontend_task: FrontendTask, difficulty: Difficulty) -> TaskSchema:
+    return TaskSchema(
+        id=frontend_task.id,
+        system_name=frontend_task.systemName,
+        code=frontend_task.code,
+        is_vulnerable=frontend_task.isVulnerable,
+        vulnerability_type=_map_vuln_type(frontend_task.vulnerabilityType),
+        difficulty=difficulty,
+        language=frontend_task.language,
+        vulnerability_line=frontend_task.vulnerabilityLine,
+    )
+
+
+def _map_vuln_type(vuln_type: str) -> str:
+    return {
+        "XSS": "xss",
+        "SQL_INJECTION": "sqli",
+        "SSRF": "ssrf",
+        "RCE": "rce",
+        "PATH_TRAVERSAL": "path_traversal",
+        "COMMAND_INJECTION": "command_injection",
+        "INSECURE_DESERIALIZATION": "insecure_deserialization",
+        "SAFE": "none",
+    }.get(vuln_type, "none")
