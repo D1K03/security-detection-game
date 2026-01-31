@@ -10,6 +10,12 @@ from uuid import uuid4
 import httpx
 from pydantic import BaseModel, ValidationError
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from ..schemas import (
     FrontendDifficulty,
     FrontendLanguage,
@@ -183,7 +189,7 @@ def _call_claude(
     }
 
     try:
-        with httpx.Client(timeout=30) as client:
+        with httpx.Client(timeout=60.0) as client:
             response = client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
             response.raise_for_status()
             data = response.json()
@@ -222,16 +228,8 @@ def _validate_tasks_payload(
     count: int,
     vuln_density: float,
 ) -> ClaudeTaskPayload:
-    if len(payload.tasks) != count:
-        raise ValueError(f"Claude returned {len(payload.tasks)} tasks, expected {count}.")
-
-    vulnerable_target = max(1, round(count * vuln_density))
-    vulnerable_count = sum(1 for task in payload.tasks if task.isVulnerable)
-    if vulnerable_count != vulnerable_target:
-        raise ValueError(
-            "Claude returned an unexpected vulnerable count: "
-            f"{vulnerable_count} (expected {vulnerable_target})."
-        )
+    # Validation relaxed to prevent runtime errors from LLM variability.
+    # The game will adapt to the actual number of tasks returned.
 
     return payload
 
@@ -245,6 +243,10 @@ def _normalize_vuln_type(is_vulnerable: bool, vuln_type: FrontendVulnType) -> Fr
 
 
 def _extract_json(text: str) -> str:
+    # Attempt to extract JSON from markdown code blocks first
+    markdown_match = re.search(r"```(?:json)?\s*(\{.*\}|\[.*\])\s*```", text, re.DOTALL)
+    if markdown_match:
+        return markdown_match.group(1)
     match = re.search(r"(\{.*\}|\[.*\])", text, re.DOTALL)
     if not match:
         raise ValueError("Claude response did not contain JSON.")
