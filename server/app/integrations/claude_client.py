@@ -113,7 +113,7 @@ def generate_security_mentor_summary(
         max_tokens=220,
     )
 
-    return response.strip()
+    return _strip_heading_marks(response)
 
 
 def _request_tasks_from_claude(
@@ -249,3 +249,9 @@ def _extract_json(text: str) -> str:
     if not match:
         raise ValueError("Claude response did not contain JSON.")
     return match.group(1)
+
+
+def _strip_heading_marks(text: str) -> str:
+    clean_text = re.sub(r"[^A-Za-z0-9\s]+", "", text)
+    
+    return re.sub(r"\s+", " ", clean_text).strip()
