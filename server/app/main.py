@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -27,6 +29,7 @@ from .integrations.hacktron import scan_with_hacktron
 from .integrations.reporting import build_findings, summarize_findings
 from .integrations.elevenlabs import generate_speech, validate_api_key
 
+load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
 app = FastAPI(title="Security Sabotage API")
 store = InMemoryStore()
 

@@ -3,11 +3,13 @@ ElevenLabs Text-to-Speech Integration
 """
 import os
 import base64
-import httpx
+from pathlib import Path
 from typing import Optional
 
+import httpx
+from dotenv import load_dotenv
 
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1"
 
 # Voice IDs mapping (using ElevenLabs preset voices)
@@ -24,12 +26,13 @@ def validate_api_key() -> tuple[bool, str]:
     Returns:
         tuple: (is_valid, error_message)
     """
-    if not ELEVENLABS_API_KEY:
+    api_key = _get_api_key()
+    if not api_key:
         return False, "ELEVENLABS_API_KEY not configured in environment"
 
     # Test the API key by fetching available voices
     url = f"{ELEVENLABS_API_URL}/voices"
-    headers = {"xi-api-key": ELEVENLABS_API_KEY}
+    headers = {"xi-api-key": api_key}
 
     try:
         with httpx.Client(timeout=10.0) as client:
@@ -64,7 +67,8 @@ def generate_speech(text: str, voice_id: Optional[str] = None) -> tuple[str, flo
     Raises:
         RuntimeError: If API key is not configured or request fails
     """
-    if not ELEVENLABS_API_KEY:
+    api_key = _get_api_key()
+    if not api_key:
         raise RuntimeError("ELEVENLABS_API_KEY not configured in environment")
 
     # Map voice presets to actual voice IDs
@@ -75,7 +79,7 @@ def generate_speech(text: str, voice_id: Optional[str] = None) -> tuple[str, flo
     headers = {
         "Accept": "audio/mpeg",
         "Content-Type": "application/json",
-        "xi-api-key": ELEVENLABS_API_KEY
+        "xi-api-key": api_key
     }
 
     data = {
@@ -125,3 +129,12 @@ def generate_speech(text: str, voice_id: Optional[str] = None) -> tuple[str, flo
         raise RuntimeError(f"Failed to connect to ElevenLabs API. Check your internet connection: {str(exc)}") from exc
     except Exception as exc:
         raise RuntimeError(f"Unexpected error generating speech: {str(exc)}") from exc
+
+
+def _get_api_key() -> Optional[str]:
+    api_key = os.getenv("ELEVENLABS_API_KEY")
+    if api_key:
+        return api_key
+    # Load repo-level .env for uvicorn reload processes.
+    load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=True)
+    return os.getenv("ELEVENLABS_API_KEY")
