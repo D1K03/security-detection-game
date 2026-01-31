@@ -23,21 +23,24 @@ function App() {
     if (state.phase !== "PLAYING") return;
 
     const timer = setInterval(() => {
-      if (state.timeRemaining <= 1) {
-        // Time's up!
-        audio.play("warning");
-        actions.timeUp();
-        setShowEmergency(true);
-      } else {
-        actions.tickTimer();
-        // Play tick sound when time is low
-        if (state.timeRemaining <= 5) {
-          audio.play("tick");
-        }
-      }
+      actions.tickTimer();
     }, 1000);
 
     return () => clearInterval(timer);
+  }, [state.phase, actions]);
+
+  // Separate effect to handle timeout
+  useEffect(() => {
+    if (state.phase !== "PLAYING") return;
+
+    if (state.timeRemaining <= 0) {
+      audio.play("warning");
+      actions.timeUp();
+      setShowEmergency(true);
+    } else if (state.timeRemaining <= 5) {
+      // Play tick sound when time is low
+      audio.play("tick");
+    }
   }, [state.phase, state.timeRemaining, actions, audio]);
 
   // Handle difficulty selection and game start

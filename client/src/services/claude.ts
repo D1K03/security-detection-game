@@ -266,9 +266,17 @@ function getUserSafe($id) {
   ],
 };
 
-// Generate unique ID
+// Generate unique ID using crypto API for better randomness
 function generateId(): string {
-  return Math.random().toString(36).substring(2, 9);
+  // Use crypto.randomUUID if available (modern browsers)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback to crypto.getRandomValues for better randomness than Math.random()
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('').substring(0, 16);
 }
 
 // Shuffle array
@@ -294,9 +302,9 @@ class ClaudeService implements IClaudeService {
         count: request.count,
       });
       return { success: true, data: response as GenerateSnippetsResponse };
-    } catch {
+    } catch (error) {
       // Fall back to mock data
-      console.log('Using mock data for code snippets');
+      console.warn('Failed to fetch snippets from API, using mock data:', error);
       return this.generateMockSnippets(request);
     }
   }

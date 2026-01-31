@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { AuditReport, Task, VulnerabilityType } from '../../types';
+import { elevenlabsService } from '../../services';
 import './ReportModal.css';
 
 interface ReportModalProps {
@@ -32,10 +33,13 @@ export function ReportModal({
   report,
   failedTasks,
   onRestart,
-  audioUrl,
+  audioUrl: initialAudioUrl,
 }: ReportModalProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | undefined>(initialAudioUrl);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   // Cleanup audio element on unmount
   useEffect(() => {
@@ -46,6 +50,53 @@ export function ReportModal({
       }
     };
   }, [audioElement]);
+
+  // Update audioUrl when initialAudioUrl changes
+  useEffect(() => {
+    if (initialAudioUrl) {
+      setAudioUrl(initialAudioUrl);
+    }
+  }, [initialAudioUrl]);
+
+  // Generate audio summary on demand
+  const handleGenerateAudio = async () => {
+    if (!report?.summary || isGeneratingAudio) return;
+
+    setIsGeneratingAudio(true);
+    setAudioError(null);
+
+    try {
+      const generatedAudioUrl = await elevenlabsService.generateReportAudio(report.summary);
+
+      if (generatedAudioUrl) {
+        setAudioUrl(generatedAudioUrl);
+        // Auto-play the generated audio
+        const audio = new Audio(generatedAudioUrl);
+        audio.onended = () => setIsPlaying(false);
+        audio.onerror = () => {
+          console.error('Failed to load or play audio');
+          setIsPlaying(false);
+          setAudioError('Failed to play audio');
+        };
+        setAudioElement(audio);
+        try {
+          await audio.play();
+          setIsPlaying(true);
+        } catch (error) {
+          console.error('Audio playback failed:', error);
+          setIsPlaying(false);
+          setAudioError('Audio playback failed');
+        }
+      } else {
+        setAudioError('Voice generation service unavailable');
+      }
+    } catch (error) {
+      console.error('Failed to generate audio:', error);
+      setAudioError('Failed to generate voice summary');
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
 
   const handlePlayAudio = async () => {
     if (!audioUrl) return;
@@ -111,8 +162,32 @@ export function ReportModal({
         {/* Summary */}
         {report?.summary && (
           <section className="report-section summary">
-            <h2 className="section-title">EXECUTIVE SUMMARY</h2>
+            <div className="summary-header">
+              <h2 className="section-title">EXECUTIVE SUMMARY</h2>
+              {!audioUrl && !isGeneratingAudio && (
+                <button
+                  className="generate-audio-button"
+                  onClick={handleGenerateAudio}
+                  title="Generate voice summary using ElevenLabs"
+                >
+                  <span className="audio-icon">🔊</span>
+                  <span>GENERATE VOICE SUMMARY</span>
+                </button>
+              )}
+              {isGeneratingAudio && (
+                <div className="generating-audio">
+                  <span className="loading-spinner-small" />
+                  <span>Generating voice...</span>
+                </div>
+              )}
+            </div>
             <p className="summary-text">{report.summary}</p>
+            {audioError && (
+              <div className="audio-error">
+                <span className="error-icon">⚠️</span>
+                <span>{audioError}</span>
+              </div>
+            )}
           </section>
         )}
 

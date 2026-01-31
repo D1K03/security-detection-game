@@ -130,6 +130,13 @@ def generate_snippets(payload: GenerateSnippetsRequest) -> GenerateSnippetsRespo
             detail=f"Invalid difficulty: {payload.difficulty}. Must be EASY, MEDIUM, or HARD."
         )
 
+    # Validate count is within reasonable limits (already in schema but enforce here too)
+    if payload.count < 1 or payload.count > 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Count must be between 1 and 10."
+        )
+
     try:
         tasks = generate_frontend_tasks(
             language=payload.language,
@@ -144,10 +151,15 @@ def generate_snippets(payload: GenerateSnippetsRequest) -> GenerateSnippetsRespo
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc)
         ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc)
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate snippets: {str(exc)}"
+            detail="Failed to generate code snippets. Please try again."
         ) from exc
 
 
@@ -191,6 +203,13 @@ def tts(payload: TTSRequest) -> TTSResponse:
             detail="Text cannot be empty."
         )
 
+    # Additional security: validate text length (already in schema but double-check)
+    if len(payload.text) > 5000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text exceeds maximum length of 5000 characters."
+        )
+
     try:
         audio_url, duration = generate_speech(
             text=payload.text,
@@ -205,5 +224,5 @@ def tts(payload: TTSRequest) -> TTSResponse:
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate speech: {str(exc)}"
+            detail="Failed to generate speech. Please try again."
         ) from exc

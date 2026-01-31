@@ -35,8 +35,22 @@ export function useAudio() {
   // Initialize audio context
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      // Use standard AudioContext or webkit fallback for Safari
+      const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass) {
+        audioContextRef.current = new AudioContextClass();
+      } else {
+        throw new Error('Web Audio API is not supported in this browser');
+      }
     }
+
+    // Resume context if it was suspended (improves performance and browser compatibility)
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume().catch(err => {
+        console.warn('Failed to resume audio context:', err);
+      });
+    }
+
     return audioContextRef.current;
   }, []);
 
@@ -130,6 +144,13 @@ export function useAudio() {
         audio.currentTime = 0;
       }
     });
+
+    // Suspend audio context to save resources when not in use
+    if (audioContextRef.current && audioContextRef.current.state === 'running') {
+      audioContextRef.current.suspend().catch(err => {
+        console.warn('Failed to suspend audio context:', err);
+      });
+    }
   }, []);
 
   // Mute/unmute
