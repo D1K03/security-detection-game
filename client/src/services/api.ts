@@ -1,27 +1,45 @@
-// Base API configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const DEFAULT_TIMEOUT = 30000;
 
-// Generic fetch wrapper with error handling
 async function fetchApi<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: response.statusText || 'Request failed',
+      }));
+      throw new Error(error.detail || error.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - please try again');
+      }
+      throw error;
+    }
+    throw new Error('An unexpected error occurred');
   }
-
-  return response.json();
 }
 
 // API methods (stubs - will connect to real backend)
