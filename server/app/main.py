@@ -25,7 +25,7 @@ from .store import InMemoryStore
 from .integrations.claude_client import generate_frontend_tasks, generate_security_mentor_summary
 from .integrations.hacktron import scan_with_hacktron
 from .integrations.reporting import build_findings, summarize_findings
-from .integrations.elevenlabs import generate_speech
+from .integrations.elevenlabs import generate_speech, validate_api_key
 
 app = FastAPI(title="Security Sabotage API")
 store = InMemoryStore()
@@ -45,6 +45,17 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/health/elevenlabs")
+def elevenlabs_health() -> dict:
+    """Check if ElevenLabs API is accessible with the configured key."""
+    is_valid, message = validate_api_key()
+    return {
+        "service": "elevenlabs",
+        "status": "ok" if is_valid else "error",
+        "message": message
+    }
 
 
 @app.get("/", response_class=HTMLResponse)

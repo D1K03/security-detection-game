@@ -134,13 +134,13 @@ function App() {
 
       if (auditResult.success) {
         // Try to generate audio for the summary
-        const audioUrl = await elevenlabsService.generateReportAudio(
+        const audioResult = await elevenlabsService.generateReportAudio(
           auditResult.data.report.summary,
         );
 
         actions.setAuditReport({
           ...auditResult.data.report,
-          audioUrl: audioUrl || undefined,
+          audioUrl: audioResult.success ? audioResult.data.audioUrl : undefined,
         });
       }
     } else {
@@ -149,14 +149,14 @@ function App() {
         "Excellent work! All security checks passed successfully. Ship systems are secure.";
 
       // Generate audio for perfect score too
-      const audioUrl = await elevenlabsService.generateReportAudio(
+      const audioResult = await elevenlabsService.generateReportAudio(
         perfectScoreSummary,
       );
 
       actions.setAuditReport({
         findings: [],
         summary: perfectScoreSummary,
-        audioUrl: audioUrl || undefined,
+        audioUrl: audioResult.success ? audioResult.data.audioUrl : undefined,
       });
     }
 

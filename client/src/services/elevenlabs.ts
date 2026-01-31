@@ -18,29 +18,31 @@ class ElevenLabsService implements IElevenLabsService {
     } catch (error) {
       // Log detailed error for debugging
       console.error('ElevenLabs TTS Error:', error);
+
+      // Extract error message from API response if available
+      let errorMessage = 'Text-to-speech service is not available';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('Error details:', errorMessage);
+      }
+
       console.log('Text-to-speech service is not available - audio playback disabled');
       return {
         success: false,
         error: {
           code: 'TTS_UNAVAILABLE',
-          message: 'Text-to-speech service is not available',
+          message: errorMessage,
         },
       };
     }
   }
 
   // Generate speech from audit report summary
-  async generateReportAudio(summary: string): Promise<string | null> {
-    const result = await this.generateSpeech({
+  async generateReportAudio(summary: string): Promise<ApiResult<TTSResponse>> {
+    return await this.generateSpeech({
       text: this.formatForSpeech(summary),
       voiceId: 'ship_computer',
     });
-
-    if (result.success) {
-      return result.data.audioUrl;
-    }
-
-    return null;
   }
 
   // Format text for better speech synthesis

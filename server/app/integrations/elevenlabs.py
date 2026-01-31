@@ -17,6 +17,39 @@ VOICE_IDS = {
 }
 
 
+def validate_api_key() -> tuple[bool, str]:
+    """
+    Validate the ElevenLabs API key by making a test request.
+
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    if not ELEVENLABS_API_KEY:
+        return False, "ELEVENLABS_API_KEY not configured in environment"
+
+    # Test the API key by fetching available voices
+    url = f"{ELEVENLABS_API_URL}/voices"
+    headers = {"xi-api-key": ELEVENLABS_API_KEY}
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(url, headers=headers)
+            if response.status_code == 401:
+                return False, "API key is invalid or expired"
+            elif response.status_code == 403:
+                return False, "API key lacks necessary permissions"
+            elif response.status_code == 429:
+                return False, "API rate limit exceeded"
+            elif response.status_code == 200:
+                return True, "API key is valid"
+            else:
+                return False, f"API returned status {response.status_code}"
+    except httpx.RequestError as exc:
+        return False, f"Cannot connect to ElevenLabs API: {str(exc)}"
+    except Exception as exc:
+        return False, f"Validation error: {str(exc)}"
+
+
 def generate_speech(text: str, voice_id: Optional[str] = None) -> tuple[str, float]:
     """
     Generate speech using ElevenLabs API.
@@ -78,8 +111,17 @@ def generate_speech(text: str, voice_id: Optional[str] = None) -> tuple[str, flo
             return audio_url, duration
 
     except httpx.HTTPStatusError as exc:
-        raise RuntimeError(f"ElevenLabs API error: {exc.response.status_code} - {exc.response.text}") from exc
+        # Provide more specific error messages based on status code
+        status_code = exc.response.status_code
+        if status_code == 401:
+            raise RuntimeError("ElevenLabs API key is invalid or expired. Please check your ELEVENLABS_API_KEY.") from exc
+        elif status_code == 429:
+            raise RuntimeError("ElevenLabs API rate limit exceeded. Please try again later.") from exc
+        elif status_code == 403:
+            raise RuntimeError("ElevenLabs API access forbidden. Check your subscription and permissions.") from exc
+        else:
+            raise RuntimeError(f"ElevenLabs API error: {status_code} - {exc.response.text}") from exc
     except httpx.RequestError as exc:
-        raise RuntimeError(f"Failed to connect to ElevenLabs API: {str(exc)}") from exc
+        raise RuntimeError(f"Failed to connect to ElevenLabs API. Check your internet connection: {str(exc)}") from exc
     except Exception as exc:
         raise RuntimeError(f"Unexpected error generating speech: {str(exc)}") from exc

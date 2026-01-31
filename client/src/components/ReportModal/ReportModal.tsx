@@ -66,9 +66,10 @@ export function ReportModal({
     setAudioError(null);
 
     try {
-      const generatedAudioUrl = await elevenlabsService.generateReportAudio(report.summary);
+      const result = await elevenlabsService.generateReportAudio(report.summary);
 
-      if (generatedAudioUrl) {
+      if (result.success && result.data) {
+        const generatedAudioUrl = result.data.audioUrl;
         setAudioUrl(generatedAudioUrl);
         // Auto-play the generated audio
         const audio = new Audio(generatedAudioUrl);
@@ -88,11 +89,15 @@ export function ReportModal({
           setAudioError('Audio playback failed');
         }
       } else {
-        setAudioError('Voice generation service unavailable');
+        // Show the actual error message from the API
+        const errorMsg = result.error?.message || 'Voice generation service unavailable';
+        setAudioError(errorMsg);
+        console.error('TTS generation failed:', errorMsg);
       }
     } catch (error) {
       console.error('Failed to generate audio:', error);
-      setAudioError('Failed to generate voice summary');
+      const errorMsg = error instanceof Error ? error.message : 'Failed to generate voice summary';
+      setAudioError(errorMsg);
     } finally {
       setIsGeneratingAudio(false);
     }
