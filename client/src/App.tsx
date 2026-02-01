@@ -11,6 +11,7 @@ import { GameScreen } from "./components/GameScreen/GameScreen";
 import { EmergencyOverlay } from "./components/EmergencyOverlay/EmergencyOverlay";
 import { ReportModal } from "./components/ReportModal/ReportModal";
 import { LoadingOverlay } from "./components/LoadingOverlay/LoadingOverlay";
+import { GameInfoModal } from "./components/GameInfoModal/GameInfoModal";
 
 import "./App.css";
 
@@ -18,6 +19,8 @@ function App() {
   const { state, currentTask, failedTasks, actions } = useGameState();
   const audio = useAudio();
   const [showEmergency, setShowEmergency] = useState(false);
+  const [showGameInfo, setShowGameInfo] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Timer effect
   useEffect(() => {
@@ -59,6 +62,7 @@ function App() {
       // Calculate config for task count
       const config = calculateGameConfig(difficulty, factors);
 
+      setIsGenerating(true);
       // Generate code snippets
       const result = await claudeService.generateSnippets({
         language,
@@ -76,6 +80,7 @@ function App() {
         // Show error state or retry
         actions.resetGame();
       }
+      setIsGenerating(false);
     },
     [actions, audio]
   );
@@ -184,19 +189,40 @@ function App() {
       case "IDLE":
         // Check if we should show difficulty select (after clicking play)
         // We use a simple check: if we just clicked play, we want difficulty select
-        return <HomePage onPlay={handlePlay} />;
+        return (
+          <>
+            <HomePage
+              onPlay={handlePlay}
+              onShowInfo={() => setShowGameInfo(true)}
+            />
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
+          </>
+        );
 
       case "LOADING":
         // If we're loading but have no tasks yet, show difficulty select
         if (state.tasks.length === 0) {
           return (
-            <DifficultySelect
-              initialDifficulty={state.difficulty}
-              initialFactors={state.difficultyFactors}
-              initialLanguage={state.language}
-              onStart={handleStartGame}
-              onBack={handleRestart}
-            />
+            <>
+              <DifficultySelect
+                initialDifficulty={state.difficulty}
+                initialFactors={state.difficultyFactors}
+                initialLanguage={state.language}
+                onStart={handleStartGame}
+                onBack={handleRestart}
+              />
+              {isGenerating && (
+                <LoadingOverlay
+                  message="GENERATING MISSION..."
+                  subtext="Claude is preparing the code snippets"
+                />
+              )}
+              {showGameInfo && (
+                <GameInfoModal onClose={() => setShowGameInfo(false)} />
+              )}
+            </>
           );
         }
         // Otherwise show loading in game screen
@@ -256,6 +282,9 @@ function App() {
                 subtext="Contacting Hacktron & Claude"
               />
             )}
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
             {showEmergency && state.gameOverReason && (
               <EmergencyOverlay
                 reason={state.gameOverReason}
@@ -279,7 +308,17 @@ function App() {
         );
 
       default:
-        return <HomePage onPlay={handlePlay} />;
+        return (
+          <>
+            <HomePage
+              onPlay={handlePlay}
+              onShowInfo={() => setShowGameInfo(true)}
+            />
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
+          </>
+        );
     }
   };
 

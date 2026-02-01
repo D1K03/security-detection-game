@@ -1,10 +1,22 @@
-import './HomePage.css';
+import { useEffect } from "react";
+import "./HomePage.css";
 
 interface HomePageProps {
   onPlay: () => void;
+  onShowInfo: () => void;
 }
 
-export function HomePage({ onPlay }: HomePageProps) {
+export function HomePage({ onPlay, onShowInfo }: HomePageProps) {
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Enter") {
+        onPlay();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onPlay]);
+
   return (
     <div className="home-page">
       <div className="home-content">
@@ -33,16 +45,20 @@ export function HomePage({ onPlay }: HomePageProps) {
           </div>
           <div className="terminal-body">
             <p className="terminal-line">
-              <span className="prompt">&gt;</span> Security breaches detected in ship systems
+              <span className="prompt">&gt;</span> Security breaches detected in
+              ship systems
             </p>
             <p className="terminal-line">
-              <span className="prompt">&gt;</span> Analyze code snippets for vulnerabilities
+              <span className="prompt">&gt;</span> Analyze code snippets for
+              vulnerabilities
             </p>
             <p className="terminal-line">
-              <span className="prompt">&gt;</span> Mark as [SAFE] or [VULNERABLE]
+              <span className="prompt">&gt;</span> Mark as [SAFE] or
+              [VULNERABLE]
             </p>
             <p className="terminal-line warning">
-              <span className="prompt">!</span> Warning: False accusations will trigger lockdown
+              <span className="prompt">!</span> Warning: False accusations will
+              trigger lockdown
             </p>
           </div>
         </div>
@@ -56,14 +72,19 @@ export function HomePage({ onPlay }: HomePageProps) {
         </div>
 
         {/* Play button */}
-        <button className="play-button" onClick={onPlay}>
-          <span className="play-icon">▶</span>
-          <span className="play-text">INITIALIZE</span>
-        </button>
+        <div className="home-action-row">
+          <button className="play-button" onClick={onPlay}>
+            <span className="play-icon">▶</span>
+            <span className="play-text">INITIALIZE</span>
+          </button>
+          <button className="info-button" onClick={onShowInfo}>
+            WHAT'S THIS?
+          </button>
+        </div>
 
         {/* Footer */}
         <div className="home-footer">
-          <p>Press [ENTER] or click to start mission</p>
+          <p>Press [ENTER] or initialize to start mission</p>
         </div>
       </div>
 

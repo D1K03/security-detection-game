@@ -40,6 +40,24 @@
   font-size: 13px;
 }
 
+.loading-overlay-info {
+  margin-top: 16px;
+  background: transparent;
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  color: #00f0ff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.loading-overlay-info:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: #00f0ff;
+}
+
 @keyframes loading-spin {
   to {
     transform: rotate(360deg);

@@ -252,6 +252,6 @@ def _extract_json(text: str) -> str:
 
 
 def _strip_heading_marks(text: str) -> str:
-    clean_text = re.sub(r"[^A-Za-z0-9\s]+", "", text)
-    
+    # Keep periods, commas, and hyphens while stripping other leading symbols.
+    clean_text = re.sub(r"[^A-Za-z0-9\s\.,-]+", "", text)
     return re.sub(r"\s+", " ", clean_text).strip()
