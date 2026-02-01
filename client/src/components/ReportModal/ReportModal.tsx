@@ -6,6 +6,7 @@ import './ReportModal.css';
 interface ReportModalProps {
   report: AuditReport | null;
   failedTasks: Task[];
+  allTasks: Task[];
   onRestart: () => void;
   audioUrl?: string;
 }
@@ -32,6 +33,7 @@ const VULN_ICONS: Record<VulnerabilityType, string> = {
 export function ReportModal({
   report,
   failedTasks,
+  allTasks,
   onRestart,
   audioUrl: initialAudioUrl,
 }: ReportModalProps) {
@@ -141,6 +143,21 @@ export function ReportModal({
       )
     : [];
 
+  const accuracyByType = allTasks
+    .filter((task) => task.isVulnerable)
+    .reduce<Record<VulnerabilityType, { correct: number; total: number }>>(
+      (acc, task) => {
+        const entry = acc[task.vulnerabilityType] || { correct: 0, total: 0 };
+        entry.total += 1;
+        if (task.userAnswer === 'vulnerable') {
+          entry.correct += 1;
+        }
+        acc[task.vulnerabilityType] = entry;
+        return acc;
+      },
+      {} as Record<VulnerabilityType, { correct: number; total: number }>
+    );
+
   return (
     <div className="report-modal">
       <div className="report-container">
@@ -164,6 +181,7 @@ export function ReportModal({
           )}
         </header>
 
+        <div className="report-scroll">
         {/* Summary */}
         {report?.summary && (
           <section className="report-section summary">
@@ -195,6 +213,29 @@ export function ReportModal({
             )}
           </section>
         )}
+
+        {/* Accuracy by vulnerability type */}
+        <section className="report-section accuracy">
+          <h2 className="section-title">ACCURACY BY VULNERABILITY</h2>
+          {Object.keys(accuracyByType).length === 0 ? (
+            <p className="summary-text">No vulnerable snippets were included in this run.</p>
+          ) : (
+            <div className="accuracy-grid">
+              {Object.entries(accuracyByType).map(([type, stats]) => {
+                const percent = Math.round((stats.correct / stats.total) * 100);
+                return (
+                  <div key={type} className="accuracy-card">
+                    <div className="accuracy-type">{type.replace('_', ' ')}</div>
+                    <div className="accuracy-score">{percent}%</div>
+                    <div className="accuracy-detail">
+                      {stats.correct}/{stats.total} correct
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         {/* Findings */}
         <section className="report-section findings">
@@ -271,6 +312,7 @@ export function ReportModal({
             </div>
           </section>
         )}
+        </div>
 
         {/* Footer */}
         <footer className="report-footer">

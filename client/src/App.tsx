@@ -97,14 +97,6 @@ function App() {
         (answer === "vulnerable" && currentTask.isVulnerable) ||
         (answer === "safe" && !currentTask.isVulnerable);
 
-      // Wrong answer: clicked "vulnerable" on safe code
-      if (answer === "vulnerable" && !currentTask.isVulnerable) {
-        audio.play("siren");
-        actions.answerTask(answer);
-        setShowEmergency(true);
-        return;
-      }
-
       // Process answer
       actions.answerTask(answer);
 
@@ -309,6 +301,7 @@ function App() {
           <ReportModal
             report={state.auditReport || null}
             failedTasks={failedTasks}
+            allTasks={state.tasks}
             onRestart={handleRestart}
             audioUrl={state.auditReport?.audioUrl}
           />

@@ -6,11 +6,15 @@ Hacktron and Claude. Optional voice summaries are generated via ElevenLabs.
 
 ## Features
 - LLM-generated tasks with realistic vulnerabilities (XSS, SQLi, SSRF, RCE, etc.)
+- Claude-generated per-snippet hints (tutorial mode, reveal on demand)
 - Real-time gameplay with timer, scoring, and system status
 - Hacktron CLI scan of missed tasks only (fast, focused audits)
 - Claude "Security Mentor" post-mortem summary
 - Optional ElevenLabs voice output
 - Live scan log overlay + staggered findings reveal
+- Audit split-screen (live logs + progress ring)
+- Tutorial mode toggle with per-snippet hints
+- Accuracy by vulnerability type in the report
 
 ## Tech Stack
 - Frontend: React + Vite + TypeScript
@@ -74,6 +78,8 @@ VITE_API_URL=http://localhost:8000
 4) Backend runs Hacktron on those snippets.
 5) Claude summarizes the vulnerabilities + fixes.
 6) ElevenLabs can generate voice summary.
+7) Tutorial mode can reveal Claude-generated hints per snippet.
+8) Report shows accuracy by vulnerability type.
 
 ## API Endpoints (Backend)
 - `GET /health`
@@ -90,6 +96,9 @@ VITE_API_URL=http://localhost:8000
 **/generate returns 503**
 - Check Anthropic model name and API key.
 - Ensure `.env` is loaded and uvicorn restarted.
+
+**Hints are missing**
+- Claude may not be returning `hints`; the UI falls back to static language tips.
 
 **/tts returns 503**
 - Check ElevenLabs API key.
