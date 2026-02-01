@@ -94,14 +94,19 @@ def generate_security_mentor_summary(
     version = os.getenv("ANTHROPIC_VERSION", "2023-06-01")
 
     system_prompt = (
-        "You are the Security Mentor. Provide a 3-sentence post-mortem summary. "
-        "Sentence 1: what went wrong. Sentence 2: how an attacker could exploit. "
-        "Sentence 3: the most direct fix. Be concise and technical."
+        "You are the Security Mentor. Provide a 3-sentence post-mortem summary focused "
+        "only on the code vulnerabilities. Do NOT mention tools, scanners, logs, or "
+        "any operational failures. Sentence 1: what went wrong (vulns only). "
+        "Sentence 2: how an attacker could exploit. Sentence 3: the most direct fix. "
+        "Be concise and technical."
     )
 
+    filtered_logs = [
+        log for log in hacktron_logs if "hacktron" not in log.lower()
+    ]
     user_prompt = {
         "failed_tasks": failed_task_summaries,
-        "hacktron_logs": hacktron_logs,
+        "hacktron_logs": filtered_logs,
     }
 
     response = _call_claude(
