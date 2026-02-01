@@ -1,0 +1,47 @@
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 14, 0.8);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.loading-overlay-card {
+  background: rgba(8, 12, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 28px 36px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.loading-overlay-spinner {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #00f0ff;
+  animation: loading-spin 0.9s linear infinite;
+}
+
+.loading-overlay-card h2 {
+  font-size: 18px;
+  letter-spacing: 1px;
+  margin: 0 0 6px;
+}
+
+.loading-overlay-card p {
+  margin: 0;
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

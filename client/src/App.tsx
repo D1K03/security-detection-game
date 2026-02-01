@@ -10,6 +10,7 @@ import { DifficultySelect } from "./components/DifficultySelect/DifficultySelect
 import { GameScreen } from "./components/GameScreen/GameScreen";
 import { EmergencyOverlay } from "./components/EmergencyOverlay/EmergencyOverlay";
 import { ReportModal } from "./components/ReportModal/ReportModal";
+import { LoadingOverlay } from "./components/LoadingOverlay/LoadingOverlay";
 
 import "./App.css";
 
@@ -48,7 +49,7 @@ function App() {
     async (
       difficulty: Difficulty,
       factors: DifficultyFactors,
-      language: Language,
+      language: Language
     ) => {
       // Set difficulty and language
       actions.setDifficulty(difficulty, factors);
@@ -76,7 +77,7 @@ function App() {
         actions.resetGame();
       }
     },
-    [actions, audio],
+    [actions, audio]
   );
 
   // Handle task answer
@@ -110,7 +111,7 @@ function App() {
         setShowEmergency(true);
       }
     },
-    [currentTask, actions, audio, state.currentTaskIndex, state.tasks.length],
+    [currentTask, actions, audio, state.currentTaskIndex, state.tasks.length]
   );
 
   // Handle continue from emergency overlay
@@ -123,7 +124,7 @@ function App() {
     // Audit failed tasks
     const tasksToAudit = state.tasks.filter(
       (t) =>
-        t.status === "failed" || (t.isVulnerable && t.status !== "completed"),
+        t.status === "failed" || (t.isVulnerable && t.status !== "completed")
     );
 
     if (tasksToAudit.length > 0) {
@@ -135,7 +136,7 @@ function App() {
       if (auditResult.success) {
         // Try to generate audio for the summary
         const audioResult = await elevenlabsService.generateReportAudio(
-          auditResult.data.report.summary,
+          auditResult.data.report.summary
         );
 
         actions.setAuditReport({
@@ -150,7 +151,7 @@ function App() {
 
       // Generate audio for perfect score too
       const audioResult = await elevenlabsService.generateReportAudio(
-        perfectScoreSummary,
+        perfectScoreSummary
       );
 
       actions.setAuditReport({
@@ -249,6 +250,12 @@ function App() {
               onAnswer={handleAnswer}
               disabled
             />
+            {!state.auditReport && (
+              <LoadingOverlay
+                message="PROCESSING SECURITY REPORT..."
+                subtext="Contacting Hacktron & Claude"
+              />
+            )}
             {showEmergency && state.gameOverReason && (
               <EmergencyOverlay
                 reason={state.gameOverReason}

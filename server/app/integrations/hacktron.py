@@ -34,7 +34,7 @@ def scan_with_hacktron(tasks: Iterable[Tuple[str, str]], language: str) -> List[
             cmd = [command] + _expand_args(args, file_path)
             output = _run_command(cmd)
             results.append((task_id, output))
-
+            
     return results
 
 
