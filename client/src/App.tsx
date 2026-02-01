@@ -10,6 +10,10 @@ import { DifficultySelect } from "./components/DifficultySelect/DifficultySelect
 import { GameScreen } from "./components/GameScreen/GameScreen";
 import { EmergencyOverlay } from "./components/EmergencyOverlay/EmergencyOverlay";
 import { ReportModal } from "./components/ReportModal/ReportModal";
+import { LoadingOverlay } from "./components/LoadingOverlay/LoadingOverlay";
+//import { ScanLogOverlay } from "./components/ScanLogOverlay/ScanLogOverlay";
+import { AuditSplitScreen } from "./components/AuditSplitScreen/AuditSplitScreen";
+import { GameInfoModal } from "./components/GameInfoModal/GameInfoModal";
 
 import "./App.css";
 
@@ -17,6 +21,9 @@ function App() {
   const { state, currentTask, failedTasks, actions } = useGameState();
   const audio = useAudio();
   const [showEmergency, setShowEmergency] = useState(false);
+  const [showGameInfo, setShowGameInfo] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [tutorialMode, setTutorialMode] = useState(false);
 
   // Timer effect
   useEffect(() => {
@@ -48,7 +55,7 @@ function App() {
     async (
       difficulty: Difficulty,
       factors: DifficultyFactors,
-      language: Language,
+      language: Language
     ) => {
       // Set difficulty and language
       actions.setDifficulty(difficulty, factors);
@@ -58,6 +65,7 @@ function App() {
       // Calculate config for task count
       const config = calculateGameConfig(difficulty, factors);
 
+      setIsGenerating(true);
       // Generate code snippets
       const result = await claudeService.generateSnippets({
         language,
@@ -75,8 +83,9 @@ function App() {
         // Show error state or retry
         actions.resetGame();
       }
+      setIsGenerating(false);
     },
-    [actions, audio],
+    [actions, audio]
   );
 
   // Handle task answer
@@ -110,7 +119,7 @@ function App() {
         setShowEmergency(true);
       }
     },
-    [currentTask, actions, audio, state.currentTaskIndex, state.tasks.length],
+    [currentTask, actions, audio, state.currentTaskIndex, state.tasks.length]
   );
 
   // Handle continue from emergency overlay
@@ -123,7 +132,7 @@ function App() {
     // Audit failed tasks
     const tasksToAudit = state.tasks.filter(
       (t) =>
-        t.status === "failed" || (t.isVulnerable && t.status !== "completed"),
+        t.status === "failed" || (t.isVulnerable && t.status !== "completed")
     );
 
     if (tasksToAudit.length > 0) {
@@ -135,7 +144,7 @@ function App() {
       if (auditResult.success) {
         // Try to generate audio for the summary
         const audioResult = await elevenlabsService.generateReportAudio(
-          auditResult.data.report.summary,
+          auditResult.data.report.summary
         );
 
         actions.setAuditReport({
@@ -150,7 +159,7 @@ function App() {
 
       // Generate audio for perfect score too
       const audioResult = await elevenlabsService.generateReportAudio(
-        perfectScoreSummary,
+        perfectScoreSummary
       );
 
       actions.setAuditReport({
@@ -183,19 +192,42 @@ function App() {
       case "IDLE":
         // Check if we should show difficulty select (after clicking play)
         // We use a simple check: if we just clicked play, we want difficulty select
-        return <HomePage onPlay={handlePlay} />;
+        return (
+          <>
+            <HomePage
+              onPlay={handlePlay}
+              onShowInfo={() => setShowGameInfo(true)}
+              tutorialEnabled={tutorialMode}
+              onToggleTutorial={() => setTutorialMode((prev) => !prev)}
+            />
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
+          </>
+        );
 
       case "LOADING":
         // If we're loading but have no tasks yet, show difficulty select
         if (state.tasks.length === 0) {
           return (
-            <DifficultySelect
-              initialDifficulty={state.difficulty}
-              initialFactors={state.difficultyFactors}
-              initialLanguage={state.language}
-              onStart={handleStartGame}
-              onBack={handleRestart}
-            />
+            <>
+              <DifficultySelect
+                initialDifficulty={state.difficulty}
+                initialFactors={state.difficultyFactors}
+                initialLanguage={state.language}
+                onStart={handleStartGame}
+                onBack={handleRestart}
+              />
+              {isGenerating && (
+                <LoadingOverlay
+                  message="GENERATING MISSION..."
+                  subtext="Claude is preparing the code snippets"
+                />
+              )}
+              {showGameInfo && (
+                <GameInfoModal onClose={() => setShowGameInfo(false)} />
+              )}
+            </>
           );
         }
         // Otherwise show loading in game screen
@@ -223,6 +255,7 @@ function App() {
               timeRemaining={state.timeRemaining}
               timePerTask={state.timePerTask}
               onAnswer={handleAnswer}
+              showTutorial={tutorialMode}
             />
             {showEmergency && state.gameOverReason && (
               <EmergencyOverlay
@@ -248,7 +281,17 @@ function App() {
               timePerTask={state.timePerTask}
               onAnswer={handleAnswer}
               disabled
+              showTutorial={tutorialMode}
             />
+            {!state.auditReport && (
+              <AuditSplitScreen
+                active={!state.auditReport}
+                findingsCount={state.tasks.filter((t) => t.isVulnerable).length}
+              />
+            )}
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
             {showEmergency && state.gameOverReason && (
               <EmergencyOverlay
                 reason={state.gameOverReason}
@@ -272,7 +315,19 @@ function App() {
         );
 
       default:
-        return <HomePage onPlay={handlePlay} />;
+        return (
+          <>
+            <HomePage
+              onPlay={handlePlay}
+              onShowInfo={() => setShowGameInfo(true)}
+              tutorialEnabled={tutorialMode}
+              onToggleTutorial={() => setTutorialMode((prev) => !prev)}
+            />
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
+          </>
+        );
     }
   };
 

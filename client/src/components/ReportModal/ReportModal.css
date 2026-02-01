@@ -370,7 +370,7 @@
 
 /* Footer */
 .report-footer {
-  padding: var(--spacing-lg) var(--spacing-xl);
+  padding: var(--spacing-sm) var(--spacing-md);
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border-primary);
   text-align: center;
@@ -380,12 +380,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-md) var(--spacing-xxl);
+  padding: var(--spacing-xs) var(--spacing-lg);
   background: linear-gradient(135deg, rgba(0, 255, 65, 0.1), rgba(0, 255, 65, 0.05));
   border: 2px solid var(--terminal-green);
   border-radius: var(--radius-md);
   color: var(--terminal-green);
-  font-size: 1rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;

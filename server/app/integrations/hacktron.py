@@ -26,24 +26,27 @@ def scan_with_hacktron(tasks: Iterable[Tuple[str, str]], language: str) -> List[
     extension = EXTENSIONS.get(language, ".txt")
     results: List[Tuple[str, str]] = []
 
+    use_wsl = command.lower() == "wsl"
+
     for task_id, code in tasks:
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = Path(temp_dir) / f"{task_id}{extension}"
             file_path.write_text(code, encoding="utf-8")
 
-            cmd = [command] + _expand_args(args, file_path)
+            target_path = _to_wsl_path(file_path) if use_wsl else str(file_path)
+            cmd = [command] + _expand_args(args, target_path)
             output = _run_command(cmd)
             results.append((task_id, output))
-
+            
     return results
 
 
-def _expand_args(args: List[str], file_path: Path) -> List[str]:
+def _expand_args(args: List[str], file_path: str) -> List[str]:
     if not args:
-        return [str(file_path)]
+        return [file_path]
     if any("{file}" in arg for arg in args):
-        return [arg.replace("{file}", str(file_path)) for arg in args]
-    return args + [str(file_path)]
+        return [arg.replace("{file}", file_path) for arg in args]
+    return args + [file_path]
 
 
 def _run_command(cmd: List[str]) -> str:
@@ -59,3 +62,19 @@ def _run_command(cmd: List[str]) -> str:
         raise RuntimeError(f"Hacktron failed (exit code {result.returncode}): {error_msg}")
 
     return (result.stdout or "").strip()
+
+
+def _to_wsl_path(path: Path) -> str:
+    cmd = ["wsl", "wslpath", "-a", str(path)]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=10)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Failed to convert Windows path for WSL (timeout).") from exc
+    except FileNotFoundError as exc:
+        raise RuntimeError("WSL not found. Ensure WSL is installed and available.") from exc
+
+    if result.returncode != 0:
+        error_msg = result.stderr.strip() or "WSL path conversion failed."
+        raise RuntimeError(error_msg)
+
+    return result.stdout.strip()
