@@ -68,6 +68,7 @@ class InMemoryStore:
                 code=task.code,
                 difficulty=task.difficulty,
                 language=task.language,
+                hints=task.hints,
             )
             for task in session.tasks
         ]
@@ -218,6 +219,7 @@ def _to_task_schema(frontend_task: FrontendTask, difficulty: Difficulty) -> Task
         difficulty=difficulty,
         language=frontend_task.language,
         vulnerability_line=frontend_task.vulnerabilityLine,
+        hints=frontend_task.hints,
     )
 
 # Normalize vulnerability type based on whether the task is vulnerable

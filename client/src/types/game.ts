@@ -51,6 +51,7 @@ export interface Task {
   vulnerabilityType: VulnerabilityType;
   vulnerabilityLine?: number;
   explanation?: string;
+  hints?: string[];
   status: TaskStatus;
   userAnswer?: 'safe' | 'vulnerable';
 }
@@ -61,6 +62,7 @@ export interface GameState {
   difficulty: Difficulty;
   difficultyFactors: DifficultyFactors;
   language: Language;
+  endlessMode: boolean;
   tasks: Task[];
   currentTaskIndex: number;
   timePerTask: number;

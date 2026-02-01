@@ -4,9 +4,16 @@ import "./HomePage.css";
 interface HomePageProps {
   onPlay: () => void;
   onShowInfo: () => void;
+  tutorialEnabled: boolean;
+  onToggleTutorial: () => void;
 }
 
-export function HomePage({ onPlay, onShowInfo }: HomePageProps) {
+export function HomePage({
+  onPlay,
+  onShowInfo,
+  tutorialEnabled,
+  onToggleTutorial,
+}: HomePageProps) {
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
@@ -81,6 +88,9 @@ export function HomePage({ onPlay, onShowInfo }: HomePageProps) {
             WHAT'S THIS?
           </button>
         </div>
+        <button className="tutorial-toggle" onClick={onToggleTutorial}>
+          {tutorialEnabled ? "TUTORIAL MODE: ON" : "TUTORIAL MODE: OFF"}
+        </button>
 
         {/* Footer */}
         <div className="home-footer">

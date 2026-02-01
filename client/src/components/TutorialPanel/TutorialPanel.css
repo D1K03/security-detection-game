@@ -1,0 +1,51 @@
+.tutorial-panel {
+  background: rgba(0, 255, 65, 0.06);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.tutorial-title {
+  color: var(--terminal-green);
+  letter-spacing: 0.2em;
+  font-size: 0.65rem;
+  margin-bottom: 8px;
+}
+
+.tutorial-panel ul {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--text-secondary);
+}
+
+.tutorial-panel li {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.tutorial-footer {
+  margin-top: 8px;
+  color: var(--text-dim);
+}
+
+.tutorial-reveal {
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: var(--terminal-green);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.tutorial-reveal:hover {
+  border-color: var(--terminal-green);
+  box-shadow: var(--terminal-glow-soft);
+}

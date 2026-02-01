@@ -3,6 +3,7 @@ import { ConsoleTerminal } from '../ConsoleTerminal/ConsoleTerminal';
 import { TaskTracker } from '../TaskTracker/TaskTracker';
 import { SecurityAction } from '../SecurityAction/SecurityAction';
 import { Timer } from '../Timer/Timer';
+import { TutorialPanel } from '../TutorialPanel/TutorialPanel';
 import './GameScreen.css';
 
 interface GameScreenProps {
@@ -14,6 +15,7 @@ interface GameScreenProps {
   timePerTask: number;
   onAnswer: (answer: 'safe' | 'vulnerable') => void;
   disabled?: boolean;
+  showTutorial?: boolean;
 }
 
 export function GameScreen({
@@ -25,6 +27,7 @@ export function GameScreen({
   timePerTask,
   onAnswer,
   disabled = false,
+  showTutorial = false,
 }: GameScreenProps) {
   if (!currentTask) {
     return (
@@ -79,6 +82,13 @@ export function GameScreen({
             totalTime={timePerTask}
             isActive={!disabled}
           />
+          {showTutorial && (
+            <TutorialPanel
+              language={language}
+              hints={currentTask?.hints}
+              taskId={currentTask?.id}
+            />
+          )}
           <SecurityAction
             onSafe={() => onAnswer('safe')}
             onVulnerable={() => onAnswer('vulnerable')}

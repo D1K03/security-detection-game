@@ -49,6 +49,10 @@
   margin-bottom: var(--spacing-xl);
 }
 
+.section .factor-toggle {
+  width: 100%;
+}
+
 .section-title {
   font-size: 0.875rem;
   color: var(--text-secondary);
