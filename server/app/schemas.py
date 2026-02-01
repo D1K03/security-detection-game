@@ -200,8 +200,8 @@ class AuditResponse(BaseModel):
 
 # Request and Response models for Text-to-Speech (TTS) Integration
 class TTSRequest(BaseModel):
-    text: str
-    voiceId: Optional[str] = None
+    text: str = Field(..., min_length=1, max_length=5000, description="Text to convert to speech (max 5000 chars)")
+    voiceId: Optional[str] = Field(None, max_length=100, description="Voice ID or preset name")
     voiceSettings: Optional[dict] = None
 
 # Response model for TTS output

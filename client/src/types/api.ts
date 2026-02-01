@@ -78,6 +78,7 @@ export interface IHacktronService {
 
 export interface IElevenLabsService {
   generateSpeech(request: TTSRequest): Promise<ApiResult<TTSResponse>>;
+  generateReportAudio(summary: string): Promise<ApiResult<TTSResponse>>;
 }
 
 // Re-export for convenience

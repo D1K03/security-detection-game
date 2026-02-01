@@ -10,6 +10,8 @@ import { DifficultySelect } from "./components/DifficultySelect/DifficultySelect
 import { GameScreen } from "./components/GameScreen/GameScreen";
 import { EmergencyOverlay } from "./components/EmergencyOverlay/EmergencyOverlay";
 import { ReportModal } from "./components/ReportModal/ReportModal";
+import { LoadingOverlay } from "./components/LoadingOverlay/LoadingOverlay";
+import { GameInfoModal } from "./components/GameInfoModal/GameInfoModal";
 
 import "./App.css";
 
@@ -17,27 +19,32 @@ function App() {
   const { state, currentTask, failedTasks, actions } = useGameState();
   const audio = useAudio();
   const [showEmergency, setShowEmergency] = useState(false);
+  const [showGameInfo, setShowGameInfo] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Timer effect
   useEffect(() => {
     if (state.phase !== "PLAYING") return;
 
     const timer = setInterval(() => {
-      if (state.timeRemaining <= 1) {
-        // Time's up!
-        audio.play("warning");
-        actions.timeUp();
-        setShowEmergency(true);
-      } else {
-        actions.tickTimer();
-        // Play tick sound when time is low
-        if (state.timeRemaining <= 5) {
-          audio.play("tick");
-        }
-      }
+      actions.tickTimer();
     }, 1000);
 
     return () => clearInterval(timer);
+  }, [state.phase, actions]);
+
+  // Separate effect to handle timeout
+  useEffect(() => {
+    if (state.phase !== "PLAYING") return;
+
+    if (state.timeRemaining <= 0) {
+      audio.play("warning");
+      actions.timeUp();
+      setShowEmergency(true);
+    } else if (state.timeRemaining <= 5) {
+      // Play tick sound when time is low
+      audio.play("tick");
+    }
   }, [state.phase, state.timeRemaining, actions, audio]);
 
   // Handle difficulty selection and game start
@@ -45,7 +52,7 @@ function App() {
     async (
       difficulty: Difficulty,
       factors: DifficultyFactors,
-      language: Language,
+      language: Language
     ) => {
       // Set difficulty and language
       actions.setDifficulty(difficulty, factors);
@@ -55,6 +62,7 @@ function App() {
       // Calculate config for task count
       const config = calculateGameConfig(difficulty, factors);
 
+      setIsGenerating(true);
       // Generate code snippets
       const result = await claudeService.generateSnippets({
         language,
@@ -72,8 +80,9 @@ function App() {
         // Show error state or retry
         actions.resetGame();
       }
+      setIsGenerating(false);
     },
-    [actions, audio],
+    [actions, audio]
   );
 
   // Handle task answer
@@ -107,7 +116,7 @@ function App() {
         setShowEmergency(true);
       }
     },
-    [currentTask, actions, audio, state.currentTaskIndex, state.tasks.length],
+    [currentTask, actions, audio, state.currentTaskIndex, state.tasks.length]
   );
 
   // Handle continue from emergency overlay
@@ -120,7 +129,7 @@ function App() {
     // Audit failed tasks
     const tasksToAudit = state.tasks.filter(
       (t) =>
-        t.status === "failed" || (t.isVulnerable && t.status !== "completed"),
+        t.status === "failed" || (t.isVulnerable && t.status !== "completed")
     );
 
     if (tasksToAudit.length > 0) {
@@ -131,21 +140,29 @@ function App() {
 
       if (auditResult.success) {
         // Try to generate audio for the summary
-        const audioUrl = await elevenlabsService.generateReportAudio(
-          auditResult.data.report.summary,
+        const audioResult = await elevenlabsService.generateReportAudio(
+          auditResult.data.report.summary
         );
 
         actions.setAuditReport({
           ...auditResult.data.report,
-          audioUrl: audioUrl || undefined,
+          audioUrl: audioResult.success ? audioResult.data.audioUrl : undefined,
         });
       }
     } else {
-      // No failed tasks, create empty report
+      // No failed tasks, create empty report with audio
+      const perfectScoreSummary =
+        "Excellent work! All security checks passed successfully. Ship systems are secure.";
+
+      // Generate audio for perfect score too
+      const audioResult = await elevenlabsService.generateReportAudio(
+        perfectScoreSummary
+      );
+
       actions.setAuditReport({
         findings: [],
-        summary:
-          "Excellent work! All security checks passed successfully. Ship systems are secure.",
+        summary: perfectScoreSummary,
+        audioUrl: audioResult.success ? audioResult.data.audioUrl : undefined,
       });
     }
 
@@ -172,19 +189,40 @@ function App() {
       case "IDLE":
         // Check if we should show difficulty select (after clicking play)
         // We use a simple check: if we just clicked play, we want difficulty select
-        return <HomePage onPlay={handlePlay} />;
+        return (
+          <>
+            <HomePage
+              onPlay={handlePlay}
+              onShowInfo={() => setShowGameInfo(true)}
+            />
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
+          </>
+        );
 
       case "LOADING":
         // If we're loading but have no tasks yet, show difficulty select
         if (state.tasks.length === 0) {
           return (
-            <DifficultySelect
-              initialDifficulty={state.difficulty}
-              initialFactors={state.difficultyFactors}
-              initialLanguage={state.language}
-              onStart={handleStartGame}
-              onBack={handleRestart}
-            />
+            <>
+              <DifficultySelect
+                initialDifficulty={state.difficulty}
+                initialFactors={state.difficultyFactors}
+                initialLanguage={state.language}
+                onStart={handleStartGame}
+                onBack={handleRestart}
+              />
+              {isGenerating && (
+                <LoadingOverlay
+                  message="GENERATING MISSION..."
+                  subtext="Claude is preparing the code snippets"
+                />
+              )}
+              {showGameInfo && (
+                <GameInfoModal onClose={() => setShowGameInfo(false)} />
+              )}
+            </>
           );
         }
         // Otherwise show loading in game screen
@@ -238,6 +276,15 @@ function App() {
               onAnswer={handleAnswer}
               disabled
             />
+            {!state.auditReport && (
+              <LoadingOverlay
+                message="PROCESSING SECURITY REPORT..."
+                subtext="Contacting Hacktron & Claude"
+              />
+            )}
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
             {showEmergency && state.gameOverReason && (
               <EmergencyOverlay
                 reason={state.gameOverReason}
@@ -261,7 +308,17 @@ function App() {
         );
 
       default:
-        return <HomePage onPlay={handlePlay} />;
+        return (
+          <>
+            <HomePage
+              onPlay={handlePlay}
+              onShowInfo={() => setShowGameInfo(true)}
+            />
+            {showGameInfo && (
+              <GameInfoModal onClose={() => setShowGameInfo(false)} />
+            )}
+          </>
+        );
     }
   };
 

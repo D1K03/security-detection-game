@@ -15,31 +15,34 @@ class ElevenLabsService implements IElevenLabsService {
         voiceId: request.voiceId,
       });
       return { success: true, data: response as TTSResponse };
-    } catch {
-      // Fall back to mock response
-      console.log('ElevenLabs API not available - audio playback disabled');
+    } catch (error) {
+      // Log detailed error for debugging
+      console.error('ElevenLabs TTS Error:', error);
+
+      // Extract error message from API response if available
+      let errorMessage = 'Text-to-speech service is not available';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('Error details:', errorMessage);
+      }
+
+      console.log('Text-to-speech service is not available - audio playback disabled');
       return {
         success: false,
         error: {
           code: 'TTS_UNAVAILABLE',
-          message: 'Text-to-speech service is not available',
+          message: errorMessage,
         },
       };
     }
   }
 
   // Generate speech from audit report summary
-  async generateReportAudio(summary: string): Promise<string | null> {
-    const result = await this.generateSpeech({
+  async generateReportAudio(summary: string): Promise<ApiResult<TTSResponse>> {
+    return await this.generateSpeech({
       text: this.formatForSpeech(summary),
       voiceId: 'ship_computer',
     });
-
-    if (result.success) {
-      return result.data.audioUrl;
-    }
-
-    return null;
   }
 
   // Format text for better speech synthesis
@@ -47,15 +50,17 @@ class ElevenLabsService implements IElevenLabsService {
     // Add pauses after periods
     let formatted = text.replace(/\./g, '... ');
 
-    // Expand abbreviations
-    formatted = formatted.replace(/XSS/g, 'Cross Site Scripting');
-    formatted = formatted.replace(/SQL/g, 'SQL');
-    formatted = formatted.replace(/RCE/g, 'Remote Code Execution');
-    formatted = formatted.replace(/SSRF/g, 'Server Side Request Forgery');
+    // Expand abbreviations for better pronunciation
+    formatted = formatted.replace(/\bXSS\b/g, 'Cross Site Scripting');
+    formatted = formatted.replace(/\bSQL\b/g, 'S Q L');
+    formatted = formatted.replace(/\bRCE\b/g, 'Remote Code Execution');
+    formatted = formatted.replace(/\bSSRF\b/g, 'Server Side Request Forgery');
+    formatted = formatted.replace(/\bAPI\b/g, 'A P I');
+    formatted = formatted.replace(/\bDDoS\b/g, 'D DoS');
 
-    // Add emphasis to severity levels
-    formatted = formatted.replace(/CRITICAL/g, 'CRITICAL');
-    formatted = formatted.replace(/HIGH/g, 'HIGH');
+    // Add emphasis to severity levels with pauses
+    formatted = formatted.replace(/\bCRITICAL\b/g, 'CRITICAL...');
+    formatted = formatted.replace(/\bHIGH\b/g, 'HIGH...');
 
     return formatted;
   }

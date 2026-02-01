@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -25,7 +27,9 @@ from .store import InMemoryStore
 from .integrations.claude_client import generate_frontend_tasks, generate_security_mentor_summary
 from .integrations.hacktron import scan_with_hacktron
 from .integrations.reporting import build_findings, summarize_findings
+from .integrations.elevenlabs import generate_speech, validate_api_key
 
+load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
 app = FastAPI(title="Security Sabotage API")
 store = InMemoryStore()
 
@@ -44,6 +48,17 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/health/elevenlabs")
+def elevenlabs_health() -> dict:
+    """Check if ElevenLabs API is accessible with the configured key."""
+    is_valid, message = validate_api_key()
+    return {
+        "service": "elevenlabs",
+        "status": "ok" if is_valid else "error",
+        "message": message
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -129,6 +144,13 @@ def generate_snippets(payload: GenerateSnippetsRequest) -> GenerateSnippetsRespo
             detail=f"Invalid difficulty: {payload.difficulty}. Must be EASY, MEDIUM, or HARD."
         )
 
+    # Validate count is within reasonable limits (already in schema but enforce here too)
+    if payload.count < 1 or payload.count > 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Count must be between 1 and 10."
+        )
+
     try:
         tasks = generate_frontend_tasks(
             language=payload.language,
@@ -143,10 +165,15 @@ def generate_snippets(payload: GenerateSnippetsRequest) -> GenerateSnippetsRespo
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc)
         ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc)
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate snippets: {str(exc)}"
+            detail="Failed to generate code snippets. Please try again."
         ) from exc
 
 
@@ -183,7 +210,33 @@ def audit_tasks(payload: AuditRequest) -> AuditResponse:
 
 @app.post("/tts", response_model=TTSResponse)
 def tts(payload: TTSRequest) -> TTSResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TTS integration is not configured."
-    )
+    """Generate text-to-speech audio using ElevenLabs API."""
+    if not payload.text or not payload.text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text cannot be empty."
+        )
+
+    # Additional security: validate text length (already in schema but double-check)
+    if len(payload.text) > 5000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text exceeds maximum length of 5000 characters."
+        )
+
+    try:
+        audio_url, duration = generate_speech(
+            text=payload.text,
+            voice_id=payload.voiceId
+        )
+        return TTSResponse(audioUrl=audio_url, duration=duration)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate speech. Please try again."
+        ) from exc
