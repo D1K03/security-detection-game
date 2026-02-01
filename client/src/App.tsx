@@ -11,7 +11,8 @@ import { GameScreen } from "./components/GameScreen/GameScreen";
 import { EmergencyOverlay } from "./components/EmergencyOverlay/EmergencyOverlay";
 import { ReportModal } from "./components/ReportModal/ReportModal";
 import { LoadingOverlay } from "./components/LoadingOverlay/LoadingOverlay";
-import { ScanLogOverlay } from "./components/ScanLogOverlay/ScanLogOverlay";
+//import { ScanLogOverlay } from "./components/ScanLogOverlay/ScanLogOverlay";
+import { AuditSplitScreen } from "./components/AuditSplitScreen/AuditSplitScreen";
 import { GameInfoModal } from "./components/GameInfoModal/GameInfoModal";
 
 import "./App.css";
@@ -278,7 +279,10 @@ function App() {
               disabled
             />
             {!state.auditReport && (
-              <ScanLogOverlay active={!state.auditReport} />
+              <AuditSplitScreen
+                active={!state.auditReport}
+                findingsCount={state.tasks.filter((t) => t.isVulnerable).length}
+              />
             )}
             {showGameInfo && (
               <GameInfoModal onClose={() => setShowGameInfo(false)} />
