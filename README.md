@@ -15,6 +15,7 @@ Hacktron and Claude. Optional voice summaries are generated via ElevenLabs.
 - Audit split-screen (live logs + progress ring)
 - Tutorial mode toggle with per-snippet hints
 - Accuracy by vulnerability type in the report
+- Endless mode: 5 easy → 5 medium → 5 hard until first mistake
 
 ## Tech Stack
 - Frontend: React + Vite + TypeScript
@@ -80,6 +81,7 @@ VITE_API_URL=http://localhost:8000
 6) ElevenLabs can generate voice summary.
 7) Tutorial mode can reveal Claude-generated hints per snippet.
 8) Report shows accuracy by vulnerability type.
+9) Endless mode advances difficulty after perfect streaks.
 
 ## API Endpoints (Backend)
 - `GET /health`
