@@ -88,6 +88,7 @@ class TaskSchema(BaseModel):
     difficulty: Difficulty
     language: Optional[str] = None
     vulnerability_line: Optional[int] = None
+    hints: Optional[List[str]] = None
 
 
 class TaskPublicSchema(BaseModel):
@@ -96,6 +97,7 @@ class TaskPublicSchema(BaseModel):
     code: str
     difficulty: Difficulty
     language: Optional[str] = None
+    hints: Optional[List[str]] = None
 
 
 class SessionCreateRequest(BaseModel):
@@ -165,6 +167,7 @@ class FrontendTask(BaseModel):
     vulnerabilityLine: Optional[int] = None
     status: FrontendTaskStatus = "pending"
     explanation: Optional[str] = None
+    hints: Optional[List[str]] = None
 
 # response model for generated snippets
 class GenerateSnippetsResponse(BaseModel):

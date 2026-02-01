@@ -23,6 +23,7 @@ function App() {
   const [showEmergency, setShowEmergency] = useState(false);
   const [showGameInfo, setShowGameInfo] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [tutorialMode, setTutorialMode] = useState(false);
 
   // Timer effect
   useEffect(() => {
@@ -196,6 +197,8 @@ function App() {
             <HomePage
               onPlay={handlePlay}
               onShowInfo={() => setShowGameInfo(true)}
+              tutorialEnabled={tutorialMode}
+              onToggleTutorial={() => setTutorialMode((prev) => !prev)}
             />
             {showGameInfo && (
               <GameInfoModal onClose={() => setShowGameInfo(false)} />
@@ -252,6 +255,7 @@ function App() {
               timeRemaining={state.timeRemaining}
               timePerTask={state.timePerTask}
               onAnswer={handleAnswer}
+              showTutorial={tutorialMode}
             />
             {showEmergency && state.gameOverReason && (
               <EmergencyOverlay
@@ -277,6 +281,7 @@ function App() {
               timePerTask={state.timePerTask}
               onAnswer={handleAnswer}
               disabled
+              showTutorial={tutorialMode}
             />
             {!state.auditReport && (
               <AuditSplitScreen
@@ -315,6 +320,8 @@ function App() {
             <HomePage
               onPlay={handlePlay}
               onShowInfo={() => setShowGameInfo(true)}
+              tutorialEnabled={tutorialMode}
+              onToggleTutorial={() => setTutorialMode((prev) => !prev)}
             />
             {showGameInfo && (
               <GameInfoModal onClose={() => setShowGameInfo(false)} />

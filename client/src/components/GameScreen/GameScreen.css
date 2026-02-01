@@ -105,7 +105,7 @@
 .game-sidebar {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   min-height: 0;
 }
 
@@ -114,7 +114,12 @@
 }
 
 .game-sidebar.right {
-  /* Timer and actions */
+  /* Timer, tutorial, and actions */
+  overflow: hidden;
+}
+
+.game-sidebar.right .security-action {
+  margin-top: auto;
 }
 
 /* Center terminal */
