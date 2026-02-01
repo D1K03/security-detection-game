@@ -1,0 +1,44 @@
+.scan-log-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 6, 12, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 55;
+}
+
+.scan-log-card {
+  width: min(520px, 92vw);
+  background: rgba(8, 12, 20, 0.96);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-mono);
+}
+
+.scan-log-header {
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: #00f0ff;
+  margin-bottom: 12px;
+}
+
+.scan-log-body {
+  max-height: 220px;
+  overflow: hidden;
+  display: grid;
+  gap: 6px;
+}
+
+.scan-log-line {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.scan-log-footer {
+  margin-top: 12px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}

@@ -11,6 +11,7 @@ import { GameScreen } from "./components/GameScreen/GameScreen";
 import { EmergencyOverlay } from "./components/EmergencyOverlay/EmergencyOverlay";
 import { ReportModal } from "./components/ReportModal/ReportModal";
 import { LoadingOverlay } from "./components/LoadingOverlay/LoadingOverlay";
+import { ScanLogOverlay } from "./components/ScanLogOverlay/ScanLogOverlay";
 import { GameInfoModal } from "./components/GameInfoModal/GameInfoModal";
 
 import "./App.css";
@@ -277,10 +278,7 @@ function App() {
               disabled
             />
             {!state.auditReport && (
-              <LoadingOverlay
-                message="PROCESSING SECURITY REPORT..."
-                subtext="Contacting Hacktron & Claude"
-              />
+              <ScanLogOverlay active={!state.auditReport} />
             )}
             {showGameInfo && (
               <GameInfoModal onClose={() => setShowGameInfo(false)} />
