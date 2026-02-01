@@ -7,6 +7,9 @@ interface DifficultySelectProps {
   initialDifficulty?: Difficulty;
   initialFactors?: DifficultyFactors;
   initialLanguage?: Language;
+  endlessMode: boolean;
+  onToggleEndless: () => void;
+  tutorialEnabled: boolean;
   onStart: (difficulty: Difficulty, factors: DifficultyFactors, language: Language) => void;
   onBack: () => void;
 }
@@ -41,6 +44,9 @@ export function DifficultySelect({
   initialDifficulty = 'MEDIUM',
   initialFactors = { affectsTimer: true, affectsComplexity: true, affectsTaskCount: false },
   initialLanguage = 'javascript',
+  endlessMode,
+  onToggleEndless,
+  tutorialEnabled,
   onStart,
   onBack,
 }: DifficultySelectProps) {
@@ -77,6 +83,24 @@ export function DifficultySelect({
         </button>
 
         <h1 className="difficulty-title">MISSION PARAMETERS</h1>
+
+        {!tutorialEnabled && (
+          <section className="section">
+            <h2 className="section-title">ENDLESS MODE</h2>
+            <label className={`factor-toggle ${endlessMode ? 'active' : ''}`}>
+              <input
+                type="checkbox"
+                checked={endlessMode}
+                onChange={onToggleEndless}
+              />
+              <span className="toggle-indicator" />
+              <div className="toggle-content">
+                <span className="toggle-icon">∞</span>
+                <span className="toggle-label">Endless Streak</span>
+              </div>
+            </label>
+          </section>
+        )}
 
         {/* Difficulty selection */}
         <section className="section">

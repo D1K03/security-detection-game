@@ -14,6 +14,7 @@ type GameAction =
   | { type: 'START_GAME' }
   | { type: 'SET_DIFFICULTY'; payload: { difficulty: Difficulty; factors: DifficultyFactors } }
   | { type: 'SET_LANGUAGE'; payload: Language }
+  | { type: 'SET_ENDLESS_MODE'; payload: boolean }
   | { type: 'START_LOADING' }
   | { type: 'LOAD_TASKS'; payload: Task[] }
   | { type: 'START_PLAYING' }
@@ -37,6 +38,7 @@ const initialState: GameState = {
     affectsTaskCount: false,
   },
   language: 'javascript',
+  endlessMode: false,
   tasks: [],
   currentTaskIndex: 0,
   timePerTask: 30,
@@ -72,6 +74,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         language: action.payload,
+      };
+    case 'SET_ENDLESS_MODE':
+      return {
+        ...state,
+        endlessMode: action.payload,
       };
 
     case 'START_LOADING':
@@ -153,6 +160,15 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const isLastTask = state.currentTaskIndex >= state.tasks.length - 1;
 
       if (isLastTask) {
+        if (state.endlessMode) {
+          return {
+            ...state,
+            tasks: updatedTasks,
+            score: newScore,
+            totalCorrect: isCorrect ? state.totalCorrect + 1 : state.totalCorrect,
+            totalIncorrect: isCorrect ? state.totalIncorrect : state.totalIncorrect + 1,
+          };
+        }
         return {
           ...state,
           tasks: updatedTasks,
@@ -277,6 +293,10 @@ export function useGameState() {
     dispatch({ type: 'SET_LANGUAGE', payload: language });
   }, []);
 
+  const setEndlessMode = useCallback((enabled: boolean) => {
+    dispatch({ type: 'SET_ENDLESS_MODE', payload: enabled });
+  }, []);
+
   const startLoading = useCallback(() => {
     dispatch({ type: 'START_LOADING' });
   }, []);
@@ -342,6 +362,7 @@ export function useGameState() {
     actions: {
       setDifficulty,
       setLanguage,
+      setEndlessMode,
       startLoading,
       loadTasks,
       startPlaying,

@@ -24,6 +24,7 @@ function App() {
   const [showGameInfo, setShowGameInfo] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [tutorialMode, setTutorialMode] = useState(false);
+  const [endlessStage, setEndlessStage] = useState<Difficulty>('EASY');
 
   // Timer effect
   useEffect(() => {
@@ -51,6 +52,20 @@ function App() {
   }, [state.phase, state.timeRemaining, actions, audio]);
 
   // Handle difficulty selection and game start
+  const generateEndlessBatch = useCallback(
+    async (stage: Difficulty, factors: DifficultyFactors, language: Language) => {
+      const config = calculateGameConfig(stage, factors);
+      const result = await claudeService.generateSnippets({
+        language,
+        difficulty: stage,
+        complexityLevel: config.complexityLevel,
+        count: 5,
+      });
+      return result;
+    },
+    []
+  );
+
   const handleStartGame = useCallback(
     async (
       difficulty: Difficulty,
@@ -58,25 +73,27 @@ function App() {
       language: Language
     ) => {
       // Set difficulty and language
-      actions.setDifficulty(difficulty, factors);
+      const startingDifficulty = state.endlessMode ? 'EASY' : difficulty;
+      actions.setDifficulty(startingDifficulty, factors);
       actions.setLanguage(language);
       actions.startLoading();
 
-      // Calculate config for task count
-      const config = calculateGameConfig(difficulty, factors);
-
       setIsGenerating(true);
-      // Generate code snippets
-      const result = await claudeService.generateSnippets({
-        language,
-        difficulty,
-        complexityLevel: config.complexityLevel,
-        count: config.taskCount,
-      });
+      const result = state.endlessMode
+        ? await generateEndlessBatch('EASY', factors, language)
+        : await claudeService.generateSnippets({
+            language,
+            difficulty,
+            complexityLevel: calculateGameConfig(difficulty, factors).complexityLevel,
+            count: calculateGameConfig(difficulty, factors).taskCount,
+          });
 
       if (result.success) {
         actions.loadTasks(result.data.tasks);
         actions.startPlaying();
+        if (state.endlessMode) {
+          setEndlessStage('EASY');
+        }
         audio.play("click");
       } else {
         console.error("Failed to generate snippets:", result.error);
@@ -85,7 +102,7 @@ function App() {
       }
       setIsGenerating(false);
     },
-    [actions, audio]
+    [actions, audio, generateEndlessBatch, state.endlessMode]
   );
 
   // Handle task answer
@@ -97,6 +114,14 @@ function App() {
         (answer === "vulnerable" && currentTask.isVulnerable) ||
         (answer === "safe" && !currentTask.isVulnerable);
 
+      if (state.endlessMode && !isCorrect) {
+        audio.play("siren");
+        actions.answerTask(answer);
+        actions.gameOver("wrong_answer");
+        setShowEmergency(true);
+        return;
+      }
+
       // Process answer
       actions.answerTask(answer);
 
@@ -106,12 +131,56 @@ function App() {
         audio.play("warning");
       }
 
+      const isLastTask = state.currentTaskIndex >= state.tasks.length - 1;
+      // Endless mode progression
+      if (state.endlessMode && isLastTask) {
+        const previousFailed = state.tasks.some(
+          (task, idx) => idx !== state.currentTaskIndex && task.status === "failed"
+        );
+        if (isCorrect && !previousFailed) {
+          const nextStage =
+            endlessStage === "EASY"
+              ? "MEDIUM"
+              : endlessStage === "MEDIUM"
+                ? "HARD"
+                : "HARD";
+          setEndlessStage(nextStage);
+          actions.startLoading();
+          setIsGenerating(true);
+          generateEndlessBatch(nextStage, state.difficultyFactors, state.language).then(
+            (result) => {
+              if (result.success) {
+                actions.loadTasks(result.data.tasks);
+                actions.startPlaying();
+              } else {
+                console.error("Failed to generate snippets:", result.error);
+                actions.resetGame();
+              }
+              setIsGenerating(false);
+            }
+          );
+          return;
+        }
+      }
+
       // Check if game is complete
-      if (state.currentTaskIndex >= state.tasks.length - 1) {
+      if (isLastTask) {
         setShowEmergency(true);
       }
     },
-    [currentTask, actions, audio, state.currentTaskIndex, state.tasks.length]
+    [
+      currentTask,
+      actions,
+      audio,
+      state.currentTaskIndex,
+      state.tasks.length,
+      state.endlessMode,
+      state.tasks,
+      state.difficultyFactors,
+      state.language,
+      endlessStage,
+      generateEndlessBatch,
+    ]
   );
 
   // Handle continue from emergency overlay
@@ -122,10 +191,12 @@ function App() {
     actions.startAuditing();
 
     // Audit failed tasks
-    const tasksToAudit = state.tasks.filter(
-      (t) =>
-        t.status === "failed" || (t.isVulnerable && t.status !== "completed")
-    );
+    const tasksToAudit = state.endlessMode
+      ? state.tasks.filter((t) => t.status === "failed")
+      : state.tasks.filter(
+          (t) =>
+            t.status === "failed" || (t.isVulnerable && t.status !== "completed")
+        );
 
     if (tasksToAudit.length > 0) {
       const auditResult = await hacktronService.auditTasks({
@@ -201,12 +272,23 @@ function App() {
       case "LOADING":
         // If we're loading but have no tasks yet, show difficulty select
         if (state.tasks.length === 0) {
+          if (state.endlessMode && isGenerating) {
+            return (
+              <LoadingOverlay
+                message="GENERATING MISSION..."
+                subtext="Claude is preparing the next batch"
+              />
+            );
+          }
           return (
             <>
               <DifficultySelect
                 initialDifficulty={state.difficulty}
                 initialFactors={state.difficultyFactors}
                 initialLanguage={state.language}
+                endlessMode={state.endlessMode}
+                onToggleEndless={() => actions.setEndlessMode(!state.endlessMode)}
+                tutorialEnabled={tutorialMode}
                 onStart={handleStartGame}
                 onBack={handleRestart}
               />

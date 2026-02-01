@@ -62,6 +62,7 @@ export interface GameState {
   difficulty: Difficulty;
   difficultyFactors: DifficultyFactors;
   language: Language;
+  endlessMode: boolean;
   tasks: Task[];
   currentTaskIndex: number;
   timePerTask: number;
